@@ -238,7 +238,7 @@
     </div>
     <div class="dd-table-wrap">
       <table class="dd-table">
-        <thead><tr><th>Case #</th><th>Product</th><th>Case Owner Team</th><th>Record Type</th><th>Date Opened</th><th>Target</th></tr></thead>
+        <thead><tr><th>Case #</th><th>Product</th><th>Case Category</th><th>Case Owner Team</th><th>Record Type</th><th>Date Opened</th><th>Target</th></tr></thead>
         <tbody id="ddTbody"></tbody>
       </table>
     </div>
@@ -623,6 +623,7 @@ function renderDrillTable() {
     return `<tr>
       <td style="font-weight:600;">${c['Case Number']}</td>
       <td>${c['Product Name']}</td>
+      <td>${c['Case Category']||'—'}</td>
       <td>${c['Case Owner Team']}</td>
       <td><span class="rec-badge ${isCS?'rec-cs':'rec-other'}">${c['Case Record Type']}</span></td>
       <td>${c['Date Opened']}</td>
