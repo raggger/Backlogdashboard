@@ -41,9 +41,11 @@
   .page.active { display: block; }
 
   /* VIEW TOGGLE */
-  .view-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
-  .view-toggle { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
-  .vt-btn { padding: 7px 18px; font-size: 13px; font-weight: 500; color: var(--text-muted); background: transparent; border: none; cursor: pointer; transition: all 0.15s; }
+  .view-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; gap: 12px; flex-wrap: wrap; }
+  .view-toggle { display: flex; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow-x: auto; max-width: calc(100% - 140px); scrollbar-width: none; }
+  .view-toggle::-webkit-scrollbar { display: none; }
+  .vt-btn { padding: 7px 14px; font-size: 12px; font-weight: 500; color: var(--text-muted); background: transparent; border: none; border-right: 1px solid var(--border); cursor: pointer; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; }
+  .vt-btn:last-child { border-right: none; }
   .vt-btn.active { background: var(--blue); color: #fff; }
   .action-btns { display: flex; gap: 8px; }
   .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid var(--border-med); background: var(--surface); color: var(--text); transition: all 0.15s; text-decoration: none; }
@@ -172,6 +174,10 @@
   .trend-flat { color: var(--text-hint); }
 
   .no-data-msg { text-align: center; padding: 32px; color: var(--text-hint); font-size: 13px; }
+  .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .chart-header .chart-title { margin-bottom: 0; }
+  .export-xls-btn { font-size: 11px; font-weight: 600; padding: 4px 10px; border: 1px solid var(--border-med); border-radius: var(--radius-sm); background: transparent; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.15s; }
+  .export-xls-btn:hover { background: var(--teal-light); color: var(--teal); border-color: var(--teal); }
   .config-notice { background: var(--amber-light); border: 1px solid var(--amber); border-radius: var(--radius-sm); padding: 12px 16px; font-size: 12px; color: #633806; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 8px; }
   .config-notice strong { display: block; margin-bottom: 2px; }
 
@@ -200,9 +206,8 @@
 <main class="main page active" id="page-dashboard">
 
   <div class="view-bar">
-    <div class="view-toggle">
-      <button class="vt-btn active" onclick="setView('all',this)">All Cases</button>
-      <button class="vt-btn" onclick="setView('cs',this)">Client Support Only</button>
+    <div class="view-toggle" id="viewToggle">
+      <!-- Built dynamically on load from record types in backlog_data.json -->
     </div>
     <div class="action-btns">
       <button class="btn btn-primary" onclick="exportPDF()">
@@ -246,11 +251,17 @@
 
   <div class="charts-row">
     <div class="chart-card">
-      <div class="chart-title">By product (top 10)</div>
+      <div class="chart-header">
+        <div class="chart-title">By product (top 10)</div>
+        <button class="export-xls-btn" onclick="exportSectionXLS('product')">⬇ Excel</button>
+      </div>
       <div style="position:relative;height:260px;"><canvas id="productChart"></canvas></div>
     </div>
     <div class="chart-card">
-      <div class="chart-title">By case category</div>
+      <div class="chart-header">
+        <div class="chart-title">By case category</div>
+        <button class="export-xls-btn" onclick="exportSectionXLS('category')">⬇ Excel</button>
+      </div>
       <div class="legend-row" id="catLegend"></div>
       <div style="position:relative;height:230px;"><canvas id="catChart"></canvas></div>
     </div>
@@ -258,7 +269,10 @@
 
   <div class="charts-row">
     <div class="chart-card">
-      <div class="chart-title">By resolution team (top 10)</div>
+      <div class="chart-header">
+        <div class="chart-title">By resolution team (top 10)</div>
+        <button class="export-xls-btn" onclick="exportSectionXLS('team')">⬇ Excel</button>
+      </div>
       <div style="position:relative;height:300px;"><canvas id="teamChart"></canvas></div>
     </div>
     <div class="chart-card">
@@ -361,6 +375,13 @@ const REC_COLORS = ['#185FA5','#1D9E75','#D85A30','#BA7517','#993556','#888780']
 const AGE_COLORS = { lt1:'#185FA5','1to2':'#EF9F27','2to3':'#EF9F27','3to4':'#D85A30','4to6':'#D85A30','6plus':'#A32D2D' };
 const AGE_LABELS = { lt1:'< 1 month','1to2':'1–2 months','2to3':'2–3 months','3to4':'3–4 months','4to6':'4–6 months','6plus':'6+ months' };
 const AGE_ORDER  = ['lt1','1to2','2to3','3to4','4to6','6plus'];
+// Consolidated display bands for age bar chart
+const DISPLAY_BUCKETS = [
+  { label:'< 1 month',  keys:['lt1'],         color:'#185FA5', pctKey:'0'   },
+  { label:'1-2 months', keys:['1to2','2to3'],  color:'#EF9F27', pctKey:'40'  },
+  { label:'3-4 months', keys:['3to4','4to6'],  color:'#D85A30', pctKey:'50'  },
+  { label:'5+ months',  keys:['6plus'],         color:'#A32D2D', pctKey:'100' },
+];
 const TAG_STYLES = {
   '40':  { bg:'#FFF0D6', color:'#854F0B', label:'40% reduce' },
   '50':  { bg:'#FAEEDA', color:'#633806', label:'50% reduce' },
@@ -372,6 +393,7 @@ const TAG_STYLES = {
 // State
 let appData = null, currentView = 'all', currentBucket = null, allActionCases = [];
 let charts = {}, monthlySnapshots = [], closureData = [], insightsLoaded = false;
+let recordTypes = []; // dynamically built from data
 
 // ── Page navigation ──────────────────────────────────────
 function showPage(page, el) {
@@ -388,7 +410,41 @@ async function loadData() {
   appData = await r.json();
   allActionCases = appData.action_cases;
   document.getElementById('snapshotBadge').textContent = 'Snapshot: ' + appData.snapshot_date;
+
+  // Build dynamic record type list from action_cases
+  recordTypes = [...new Set(allActionCases.map(c => c['Case Record Type']).filter(Boolean))].sort();
+
+  buildViewToggle();
   render();
+}
+
+function buildViewToggle() {
+  // Always start with All Cases, then one tab per record type sorted by volume
+  const countByType = {};
+  allActionCases.forEach(c => {
+    const rt = c['Case Record Type'] || 'Unknown';
+    countByType[rt] = (countByType[rt] || 0) + 1;
+  });
+
+  // Sort record types by volume descending
+  const sorted = [...recordTypes].sort((a,b) => (countByType[b]||0) - (countByType[a]||0));
+
+  const toggle = document.getElementById('viewToggle');
+  toggle.innerHTML = `<button class="vt-btn active" onclick="setView('all',this)">All Cases</button>`
+    + sorted.map(rt => {
+        const key = 'rt_' + rt.replace(/[^a-zA-Z0-9]/g,'_');
+        const count = countByType[rt] || 0;
+        return `<button class="vt-btn" onclick="setView('${key}',this)" title="${rt} — ${count} cases">${rt}</button>`;
+      }).join('');
+}
+
+// Resolve the current view to a record type filter (null = all)
+function currentRecordTypeFilter() {
+  if (currentView === 'all') return null;
+  // e.g. 'rt_Client_Support' → 'Client Support'
+  const match = currentView.replace('rt_', '').replace(/_/g, ' ');
+  // Find the exact record type that matches (handle spaces vs underscores)
+  return recordTypes.find(rt => rt.replace(/[^a-zA-Z0-9]/g,'_') === currentView.replace('rt_','')) || null;
 }
 
 function setView(v, btn) {
@@ -399,8 +455,43 @@ function setView(v, btn) {
   render();
 }
 
+function getFilteredData() {
+  // For 'all' use appData.all summary; for a specific record type compute on the fly from action_cases
+  if (currentView === 'all') return appData.all;
+
+  const rtFilter = currentRecordTypeFilter();
+  if (!rtFilter) return appData.all;
+
+  // Build summary for this record type from action_cases + appData structure
+  // We use appData.all as base but filter action_cases for the metrics
+  // For chart data we rebuild from action_cases for this record type
+  const filtered = allActionCases.filter(c => c['Case Record Type'] === rtFilter);
+
+  const by_age = {}, by_product = {}, by_cat = {}, by_team = {}, by_rec = {};
+  filtered.forEach(c => {
+    by_age[c.age_bucket]         = (by_age[c.age_bucket]||0) + 1;
+    by_product[c['Product Name']]  = (by_product[c['Product Name']]||0) + 1;
+    by_cat[c['Case Category']]     = (by_cat[c['Case Category']]||0) + 1;
+    by_team[c['Case Owner Team']]  = (by_team[c['Case Owner Team']]||0) + 1;
+    by_rec[c['Case Record Type']]  = (by_rec[c['Case Record Type']]||0) + 1;
+  });
+
+  // Also count lt1 from appData (action_cases only has age >= 1 month)
+  // For the age bar chart we show what we have; lt1 won't appear for filtered views — that's fine
+  const sortObj = (obj, n=10) => Object.fromEntries(Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n));
+
+  return {
+    total: filtered.length,
+    by_age,
+    by_product: sortObj(by_product),
+    by_cat:     sortObj(by_cat, 6),
+    by_team:    sortObj(by_team),
+    by_rec,
+  };
+}
+
 function render() {
-  const d = appData[currentView];
+  const d = getFilteredData();
   renderMetrics(d);
   renderTargetGrid(d);
   renderAgeBars(d);
@@ -411,19 +502,28 @@ function render() {
 }
 
 function renderMetrics(d) {
-  const target = allActionCases.filter(c => {
-    if (currentView === 'cs' && c['Case Record Type'] !== 'Client Support') return false;
-    return c.target_reduction > 0;
-  }).length;
-  const plus5 = allActionCases.filter(c => {
-    if (currentView === 'cs' && c['Case Record Type'] !== 'Client Support') return false;
-    return c.age_bucket === '4to6' || c.age_bucket === '6plus';
-  }).length;
+  const rtFilter = currentRecordTypeFilter();
+  const filteredCases = rtFilter
+    ? allActionCases.filter(c => c['Case Record Type'] === rtFilter)
+    : allActionCases;
+
+  const target = filteredCases.filter(c => c.target_reduction > 0).length;
+  const plus5  = filteredCases.filter(c => c.age_bucket === '4to6' || c.age_bucket === '6plus').length;
+
+  const isAll = currentView === 'all';
+  const label1 = isAll ? 'Total cases' : `${rtFilter} cases`;
+  const val1   = d.total.toLocaleString();
+  const sub1   = isAll ? 'All record types' : `${Math.round(d.total/appData.all.total*100)}% of total backlog`;
+
+  const label2 = isAll ? 'Client Support' : '% of total backlog';
+  const val2   = isAll ? appData.cs.total.toLocaleString() : Math.round(d.total/appData.all.total*100)+'%';
+  const sub2   = isAll ? 'Primary record type' : appData.all.total.toLocaleString()+' total cases';
+
   const mets = [
-    { label: currentView==='cs'?'Client Support cases':'Total cases', val: d.total.toLocaleString(), sub: currentView==='cs'?'Primary focus area':'All record types', cls:'' },
-    { label: currentView==='cs'?'% of total backlog':'Client Support', val: currentView==='cs'?Math.round(d.total/appData.all.total*100)+'%':appData.cs.total.toLocaleString(), sub: currentView==='cs'?appData.all.total.toLocaleString()+' total cases':'Primary record type', cls:'' },
-    { label: 'Require action', val: target.toLocaleString(), sub: 'Cases with reduction target', cls:'met-warn' },
-    { label: '5+ months (close target)', val: plus5.toLocaleString(), sub: 'Must be closed', cls:'met-danger' },
+    { label:label1, val:val1, sub:sub1, cls:'' },
+    { label:label2, val:val2, sub:sub2, cls:'' },
+    { label:'Require action', val:target.toLocaleString(), sub:'Cases with reduction target', cls:'met-warn' },
+    { label:'5+ months (close target)', val:plus5.toLocaleString(), sub:'Must be closed', cls:'met-danger' },
   ];
   document.getElementById('metricsRow').innerHTML = mets.map(m =>
     `<div class="met ${m.cls}"><div class="met-label">${m.label}</div><div class="met-val">${m.val}</div><div class="met-sub">${m.sub}</div></div>`
@@ -440,8 +540,9 @@ function getTargetBands() {
 }
 
 function filteredCasesForBuckets(buckets) {
+  const rtFilter = currentRecordTypeFilter();
   return allActionCases.filter(c => {
-    if (currentView==='cs' && c['Case Record Type']!=='Client Support') return false;
+    if (rtFilter && c['Case Record Type'] !== rtFilter) return false;
     return buckets.includes(c.age_bucket);
   });
 }
@@ -449,8 +550,9 @@ function filteredCasesForBuckets(buckets) {
 function filteredCasesForBucket(bucket) {
   const band = getTargetBands().find(b => b.bucket === bucket);
   if (band) return filteredCasesForBuckets(band.comboBuckets);
+  const rtFilter = currentRecordTypeFilter();
   return allActionCases.filter(c => {
-    if (currentView==='cs' && c['Case Record Type']!=='Client Support') return false;
+    if (rtFilter && c['Case Record Type'] !== rtFilter) return false;
     return c.age_bucket === bucket;
   });
 }
@@ -530,17 +632,17 @@ function renderDrillTable() {
 }
 
 function renderAgeBars(d) {
-  const max = Math.max(...AGE_ORDER.map(k=>d.by_age[k]||0));
-  document.getElementById('ageBars').innerHTML = AGE_ORDER.map(k => {
-    const n=d.by_age[k]||0, w=max?Math.round((n/max)*100):0, col=AGE_COLORS[k];
-    let pctKey='0';
-    if (k==='1to2'||k==='2to3') pctKey='40';
-    else if (k==='3to4'||k==='4to6') pctKey='50';
-    else if (k==='6plus') pctKey='100';
-    const tag=TAG_STYLES[pctKey];
+  const bucketTotals = DISPLAY_BUCKETS.map(b => ({
+    label: b.label, color: b.color, pctKey: b.pctKey,
+    n: b.keys.reduce((sum, k) => sum + (d.by_age[k] || 0), 0),
+  }));
+  const max = Math.max(...bucketTotals.map(b => b.n), 1);
+  document.getElementById('ageBars').innerHTML = bucketTotals.map(b => {
+    const w = Math.round((b.n / max) * 100);
+    const tag = TAG_STYLES[b.pctKey];
     return `<div class="age-row">
-      <span class="age-label">${AGE_LABELS[k]}</span>
-      <div class="age-bar-bg"><div class="age-bar-fill" style="width:${w}%;background:${col}">${n}</div></div>
+      <span class="age-label">${b.label}</span>
+      <div class="age-bar-bg"><div class="age-bar-fill" style="width:${w}%;background:${b.color}">${b.n}</div></div>
       <span class="age-tag" style="background:${tag.bg};color:${tag.color}">${tag.label}</span>
     </div>`;
   }).join('');
@@ -837,6 +939,60 @@ function renderTeamPerf(monthly) {
       }).join('')}</tbody>
     </table>
     <p style="font-size:11px;color:var(--text-hint);margin-top:10px;">↑ increase = more aging cases &nbsp;·&nbsp; ↓ decrease = improvement</p>`;
+}
+
+// ── Section Excel Export ─────────────────────────────
+function exportSectionXLS(section) {
+  const rtFilter = currentRecordTypeFilter();
+  // Get all action cases filtered by current view
+  const cases = rtFilter
+    ? allActionCases.filter(c => c['Case Record Type'] === rtFilter)
+    : allActionCases;
+
+  // Build rows based on section
+  let rows = [], filename = '';
+
+  if (section === 'product') {
+    filename = 'By_Product';
+    // One row per case, grouped by product
+    const sorted = [...cases].sort((a,b) => (a['Product Name']||'').localeCompare(b['Product Name']||''));
+    rows = [['Case Number','Product Name','Case Owner','Case Owner Team','Account Name','Case Category','Case Record Type','Date Opened','Age Bucket','Reduction Target %']];
+    sorted.forEach(c => rows.push([
+      c['Case Number'], c['Product Name'], c['Case Owner'], c['Case Owner Team'],
+      c['Account Name'], c['Case Category'], c['Case Record Type'], c['Date Opened'],
+      c.age_bucket, c.target_reduction
+    ]));
+  } else if (section === 'category') {
+    filename = 'By_Category';
+    const sorted = [...cases].sort((a,b) => (a['Case Category']||'').localeCompare(b['Case Category']||''));
+    rows = [['Case Number','Case Category','Product Name','Case Owner','Case Owner Team','Account Name','Case Record Type','Date Opened','Age Bucket','Reduction Target %']];
+    sorted.forEach(c => rows.push([
+      c['Case Number'], c['Case Category'], c['Product Name'], c['Case Owner'],
+      c['Case Owner Team'], c['Account Name'], c['Case Record Type'], c['Date Opened'],
+      c.age_bucket, c.target_reduction
+    ]));
+  } else if (section === 'team') {
+    filename = 'By_Team';
+    const sorted = [...cases].sort((a,b) => (a['Case Owner Team']||'').localeCompare(b['Case Owner Team']||''));
+    rows = [['Case Number','Case Owner Team','Case Owner','Product Name','Account Name','Case Category','Case Record Type','Date Opened','Age Bucket','Reduction Target %']];
+    sorted.forEach(c => rows.push([
+      c['Case Number'], c['Case Owner Team'], c['Case Owner'], c['Product Name'],
+      c['Account Name'], c['Case Category'], c['Case Record Type'], c['Date Opened'],
+      c.age_bucket, c.target_reduction
+    ]));
+  }
+
+  // Convert to CSV (works as Excel-compatible CSV)
+  const csvContent = rows.map(row =>
+    row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')
+  ).join('\n');
+
+  const viewLabel = rtFilter ? rtFilter.replace(/[^a-zA-Z0-9]/g,'_') : 'All';
+  const date = appData?.snapshot_date?.replace(/ /g,'_') || new Date().toISOString().slice(0,10);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' }));
+  a.download = `Backlog_${filename}_${viewLabel}_${date}.csv`;
+  a.click();
 }
 
 // ── PDF Export ───────────────────────────────────────────
