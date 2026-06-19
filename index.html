@@ -64,9 +64,30 @@
   .page.active { display: block; }
 
   /* VIEW TOGGLE */
-  .view-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; gap: 12px; flex-wrap: wrap; }
+  .view-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; flex-wrap: wrap; }
   .view-toggle { display: flex; background: rgba(10,20,35,0.6); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.12); border-radius: var(--radius-sm); overflow-x: auto; max-width: calc(100% - 140px); scrollbar-width: none; }
   .view-toggle::-webkit-scrollbar { display: none; }
+
+  /* TEAM FILTER */
+  .team-filter-bar { display: flex; align-items: center; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; }
+  .tf-label { font-size: 10px; font-weight: 700; color: var(--text-hint); text-transform: uppercase; letter-spacing: 0.07em; margin-right: 2px; white-space: nowrap; }
+  .tf-btn { padding: 5px 13px; font-size: 12px; font-weight: 500; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.05); color: var(--text-muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .tf-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+  .tf-btn.active { font-weight: 700; color: #fff; }
+  .tf-btn#tf-all.active  { background: var(--teal); border-color: var(--teal); color: #0d1b2a; }
+  .tf-btn.tf-dms.active  { background: #185FA5; border-color: #185FA5; }
+  .tf-btn.tf-dist.active { background: #D85A30; border-color: #D85A30; }
+  .tf-btn.tf-adv.active  { background: #7c6af5; border-color: #7c6af5; }
+  /* Disabled state — non-Client Support views */
+  .team-filter-bar.tf-disabled { opacity: 0.35; pointer-events: none; }
+  .team-filter-bar.tf-disabled::after { content: 'Client Support only'; font-size: 10px; color: var(--text-hint); font-style: italic; margin-left: 8px; }
+
+  /* CROSS-FILTER */
+  .chart-card.cf-active { border-color: var(--teal) !important; box-shadow: 0 0 0 2px rgba(0,212,170,0.2); }
+  .cf-clear-btn { font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 10px; border: 1px solid rgba(0,212,170,0.5); background: rgba(0,212,170,0.1); color: var(--teal); cursor: pointer; display: none; }
+  .cf-clear-btn.visible { display: inline-block; }
+  .cf-filter-label { font-size: 10px; color: var(--teal); margin-left: 6px; font-style: italic; }
+  canvas { cursor: pointer; }
   .vt-btn { padding: 7px 14px; font-size: 12px; font-weight: 500; color: var(--text-muted); background: transparent; border: none; border-right: 1px solid var(--border); cursor: pointer; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; }
   .vt-btn:last-child { border-right: none; }
   .vt-btn.active { background: var(--blue); color: #fff; }
@@ -240,6 +261,15 @@
     </div>
   </div>
 
+  <!-- Team group filter -->
+  <div class="team-filter-bar">
+    <span class="tf-label">Team</span>
+    <button class="tf-btn active" id="tf-all"  onclick="setTeamFilter('all',this)">All Teams</button>
+    <button class="tf-btn tf-dms"  id="tf-dms"  onclick="setTeamFilter('dms',this)">Data Management</button>
+    <button class="tf-btn tf-dist" id="tf-dist" onclick="setTeamFilter('dist',this)">Distribution</button>
+    <button class="tf-btn tf-adv"  id="tf-adv"  onclick="setTeamFilter('adv',this)">Advisory</button>
+  </div>
+
   <div class="metrics" id="metricsRow"></div>
 
   <div class="target-panel">
@@ -273,17 +303,23 @@
   </div>
 
   <div class="charts-row">
-    <div class="chart-card">
+    <div class="chart-card" id="card-product">
       <div class="chart-header">
-        <div class="chart-title">By product (top 10)</div>
-        <button class="export-xls-btn" onclick="exportSectionXLS('product')">⬇ Excel</button>
+        <div class="chart-title">By product (top 10)<span class="cf-filter-label" id="cf-label-product"></span></div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="cf-clear-btn" id="cf-clear-product" onclick="clearChartFilter('product')">✕ clear</button>
+          <button class="export-xls-btn" onclick="exportSectionXLS('product')">⬇ Excel</button>
+        </div>
       </div>
       <div style="position:relative;height:260px;"><canvas id="productChart"></canvas></div>
     </div>
-    <div class="chart-card">
+    <div class="chart-card" id="card-cat">
       <div class="chart-header">
-        <div class="chart-title">By case category</div>
-        <button class="export-xls-btn" onclick="exportSectionXLS('category')">⬇ Excel</button>
+        <div class="chart-title">By case category<span class="cf-filter-label" id="cf-label-cat"></span></div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="cf-clear-btn" id="cf-clear-cat" onclick="clearChartFilter('cat')">✕ clear</button>
+          <button class="export-xls-btn" onclick="exportSectionXLS('category')">⬇ Excel</button>
+        </div>
       </div>
       <div class="legend-row" id="catLegend"></div>
       <div style="position:relative;height:230px;"><canvas id="catChart"></canvas></div>
@@ -291,15 +327,21 @@
   </div>
 
   <div class="charts-row">
-    <div class="chart-card">
+    <div class="chart-card" id="card-team">
       <div class="chart-header">
-        <div class="chart-title">By resolution team (top 10)</div>
-        <button class="export-xls-btn" onclick="exportSectionXLS('team')">⬇ Excel</button>
+        <div class="chart-title">By resolution team (top 10)<span class="cf-filter-label" id="cf-label-team"></span></div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="cf-clear-btn" id="cf-clear-team" onclick="clearChartFilter('team')">✕ clear</button>
+          <button class="export-xls-btn" onclick="exportSectionXLS('team')">⬇ Excel</button>
+        </div>
       </div>
       <div style="position:relative;height:300px;"><canvas id="teamChart"></canvas></div>
     </div>
-    <div class="chart-card">
-      <div class="chart-title">By case record type</div>
+    <div class="chart-card" id="card-rec">
+      <div class="chart-header">
+        <div class="chart-title">By case record type<span class="cf-filter-label" id="cf-label-rec"></span></div>
+        <button class="cf-clear-btn" id="cf-clear-rec" onclick="clearChartFilter('rec')">✕ clear</button>
+      </div>
       <div class="legend-row" id="recLegend"></div>
       <div style="position:relative;height:300px;"><canvas id="recChart"></canvas></div>
     </div>
@@ -417,6 +459,23 @@ const TAG_STYLES = {
 let appData = null, currentView = 'all', currentBucket = null, allActionCases = [];
 let charts = {}, monthlySnapshots = [], closureData = [], insightsLoaded = false;
 let recordTypes = []; // dynamically built from data
+let currentTeamFilter = 'all'; // 'all' | 'dms' | 'dist' | 'adv'
+let crossFilter = { product: null, cat: null, team: null, rec: null };
+
+// Product → Team mapping
+const PRODUCT_TEAM = {
+  'publiFund':'dms','fundinfo Feeds':'dms','Plus Documents':'dms','Data Provider':'dms',
+  'FundConnect - Web Solutions':'dms','Plus Digital':'dms','Fundinfo Web Publishing Service':'dms',
+  'e-File':'dms','Fundinfo.com':'dms','KiiHUB':'dms','etfinfo.com':'dms','Fundinfo Access':'dms',
+  'Reg Outputs - Nexus':'dms','Publication- Membership':'dms','Fundipedia':'dms','FSQ RS':'dms',
+  'Web Tools':'dms','fundinfo Statistics':'dms','FSQ WL Portal':'dms',
+  'FundConnect Document Production':'dms','Nexus AI':'dms','fundinfo Document Dissemination':'dms',
+  'Factsheet Production':'dms','CSSP - SAAS':'dms','FE Invest':'dms','AIFMD Reporting':'dms','Finscape':'dms',
+  'EFS Dissemination':'dist','Feeds - FundConnect':'dist','EFS Feeds':'dist','FE Feeds':'dist',
+  'Plus Datafeeds':'dist','Fund Collect':'dist','Plus Dissemination':'dist',
+  'MPS':'adv','CashCalc':'adv','Analytics':'adv','FE Trustnet':'adv','FinXL':'adv',
+  'AdviserAsset':'adv','Command Deck':'adv',
+};
 
 // ── Page navigation ──────────────────────────────────────
 function showPage(page, el) {
@@ -474,34 +533,61 @@ function setView(v, btn) {
   currentView = v;
   document.querySelectorAll('.vt-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  crossFilter = { product: null, cat: null, team: null, rec: null };
+  updateCrossFilterUI();
+
+  // Team filter only applies to Client Support record type
+  const rtFilter = currentRecordTypeFilter();
+  const isClientSupport = !rtFilter || rtFilter === 'Client Support';
+  const bar = document.getElementById('teamFilterBar');
+  if (isClientSupport) {
+    bar.classList.remove('tf-disabled');
+  } else {
+    bar.classList.add('tf-disabled');
+    // Reset team filter back to All when leaving Client Support
+    currentTeamFilter = 'all';
+    document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tf-all').classList.add('active');
+  }
+
+  closeDrilldown();
+  render();
+}
+
+function setTeamFilter(team, btn) {
+  currentTeamFilter = team;
+  document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  crossFilter = { product: null, cat: null, team: null, rec: null };
+  updateCrossFilterUI();
   closeDrilldown();
   render();
 }
 
 function getFilteredData() {
-  // For 'all' use appData.all summary; for a specific record type compute on the fly from action_cases
-  if (currentView === 'all') return appData.all;
-
   const rtFilter = currentRecordTypeFilter();
-  if (!rtFilter) return appData.all;
+  const sortObj = (obj, n=10) => Object.fromEntries(Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n));
 
-  // Build summary for this record type from action_cases + appData structure
-  // We use appData.all as base but filter action_cases for the metrics
-  // For chart data we rebuild from action_cases for this record type
-  const filtered = allActionCases.filter(c => c['Case Record Type'] === rtFilter);
+  let filtered = allActionCases;
+  if (rtFilter) filtered = filtered.filter(c => c['Case Record Type'] === rtFilter);
+  if (currentTeamFilter !== 'all') filtered = filtered.filter(c => PRODUCT_TEAM[c['Product Name']] === currentTeamFilter);
+  if (crossFilter.product) filtered = filtered.filter(c => c['Product Name'] === crossFilter.product);
+  if (crossFilter.cat)     filtered = filtered.filter(c => c['Case Category'] === crossFilter.cat);
+  if (crossFilter.team)    filtered = filtered.filter(c => c['Case Owner Team'] === crossFilter.team);
+  if (crossFilter.rec)     filtered = filtered.filter(c => c['Case Record Type'] === crossFilter.rec);
 
   const by_age = {}, by_product = {}, by_cat = {}, by_team = {}, by_rec = {};
   filtered.forEach(c => {
-    by_age[c.age_bucket]         = (by_age[c.age_bucket]||0) + 1;
+    by_age[c.age_bucket]           = (by_age[c.age_bucket]||0) + 1;
     by_product[c['Product Name']]  = (by_product[c['Product Name']]||0) + 1;
     by_cat[c['Case Category']]     = (by_cat[c['Case Category']]||0) + 1;
     by_team[c['Case Owner Team']]  = (by_team[c['Case Owner Team']]||0) + 1;
     by_rec[c['Case Record Type']]  = (by_rec[c['Case Record Type']]||0) + 1;
   });
 
-  // Also count lt1 from appData (action_cases only has age >= 1 month)
-  // For the age bar chart we show what we have; lt1 won't appear for filtered views — that's fine
-  const sortObj = (obj, n=10) => Object.fromEntries(Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n));
+  // Include lt1 from appData when no filters active
+  const noFilter = !rtFilter && currentTeamFilter === 'all' && !Object.values(crossFilter).some(Boolean);
+  if (noFilter) by_age['lt1'] = appData.all.by_age['lt1'] || 0;
 
   return {
     total: filtered.length,
@@ -510,7 +596,37 @@ function getFilteredData() {
     by_cat:     sortObj(by_cat, 6),
     by_team:    sortObj(by_team),
     by_rec,
+    _filtered: filtered,
   };
+}
+
+// Cross-filter helpers
+function applyChartFilter(dim, val) {
+  crossFilter[dim] = crossFilter[dim] === val ? null : val;
+  updateCrossFilterUI();
+  render();
+}
+function clearChartFilter(dim) {
+  crossFilter[dim] = null;
+  updateCrossFilterUI();
+  render();
+}
+function updateCrossFilterUI() {
+  ['product','cat','team','rec'].forEach(dim => {
+    const card  = document.getElementById('card-' + dim);
+    const clear = document.getElementById('cf-clear-' + dim);
+    const label = document.getElementById('cf-label-' + dim);
+    if (!card) return;
+    if (crossFilter[dim]) {
+      card.classList.add('cf-active');
+      if (clear) clear.classList.add('visible');
+      if (label) label.textContent = ' — ' + crossFilter[dim];
+    } else {
+      card.classList.remove('cf-active');
+      if (clear) clear.classList.remove('visible');
+      if (label) label.textContent = '';
+    }
+  });
 }
 
 function render() {
@@ -525,22 +641,20 @@ function render() {
 }
 
 function renderMetrics(d) {
-  const rtFilter = currentRecordTypeFilter();
-  const filteredCases = rtFilter
-    ? allActionCases.filter(c => c['Case Record Type'] === rtFilter)
-    : allActionCases;
-
+  const filteredCases = d._filtered || allActionCases;
   const target = filteredCases.filter(c => c.target_reduction > 0).length;
   const plus5  = filteredCases.filter(c => c.age_bucket === '4to6' || c.age_bucket === '6plus').length;
 
-  const isAll = currentView === 'all';
-  const label1 = isAll ? 'Total cases' : `${rtFilter} cases`;
-  const val1   = d.total.toLocaleString();
-  const sub1   = isAll ? 'All record types' : `${Math.round(d.total/appData.all.total*100)}% of total backlog`;
+  const noFilter = currentView === 'all' && currentTeamFilter === 'all' && !Object.values(crossFilter).some(Boolean);
+  const pct = appData.all.total ? Math.round(d.total / appData.all.total * 100) : 100;
 
-  const label2 = isAll ? 'Client Support' : '% of total backlog';
-  const val2   = isAll ? appData.cs.total.toLocaleString() : Math.round(d.total/appData.all.total*100)+'%';
-  const sub2   = isAll ? 'Primary record type' : appData.all.total.toLocaleString()+' total cases';
+  const label1 = 'Total cases';
+  const val1   = d.total.toLocaleString();
+  const sub1   = noFilter ? 'All record types' : `${pct}% of total backlog`;
+
+  const label2 = noFilter ? 'Client Support' : '% of total backlog';
+  const val2   = noFilter ? appData.cs.total.toLocaleString() : pct + '%';
+  const sub2   = noFilter ? 'Primary record type' : appData.all.total.toLocaleString() + ' total cases';
 
   const mets = [
     { label:label1, val:val1, sub:sub1, cls:'' },
@@ -566,6 +680,11 @@ function filteredCasesForBuckets(buckets) {
   const rtFilter = currentRecordTypeFilter();
   return allActionCases.filter(c => {
     if (rtFilter && c['Case Record Type'] !== rtFilter) return false;
+    if (currentTeamFilter !== 'all' && PRODUCT_TEAM[c['Product Name']] !== currentTeamFilter) return false;
+    if (crossFilter.product && c['Product Name'] !== crossFilter.product) return false;
+    if (crossFilter.cat     && c['Case Category'] !== crossFilter.cat) return false;
+    if (crossFilter.team    && c['Case Owner Team'] !== crossFilter.team) return false;
+    if (crossFilter.rec     && c['Case Record Type'] !== crossFilter.rec) return false;
     return buckets.includes(c.age_bucket);
   });
 }
@@ -675,20 +794,28 @@ function renderAgeBars(d) {
 function mkChart(id,cfg) { if(charts[id]) charts[id].destroy(); charts[id]=new Chart(document.getElementById(id),cfg); }
 
 function renderProductChart(d) {
-  mkChart('productChart',{type:'bar',data:{labels:Object.keys(d.by_product),datasets:[{label:'Cases',data:Object.values(d.by_product),backgroundColor:'#185FA5',borderRadius:3}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:11}}},y:{ticks:{font:{size:11}},grid:{display:false}}}}});
+  const labels = Object.keys(d.by_product);
+  const data   = Object.values(d.by_product);
+  const colors = labels.map(l => crossFilter.product && crossFilter.product !== l ? 'rgba(24,95,165,0.3)' : '#185FA5');
+  mkChart('productChart',{type:'bar',data:{labels,datasets:[{label:'Cases',data,backgroundColor:colors,borderRadius:3}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:11}}},y:{ticks:{font:{size:11}},grid:{display:false}}},onClick:(e,els)=>{if(els.length)applyChartFilter('product',labels[els[0].index]);}}});
 }
 function renderCatChart(d) {
   const labels=Object.keys(d.by_cat),data=Object.values(d.by_cat);
+  const colors = labels.map((l,i) => crossFilter.cat && crossFilter.cat !== l ? CAT_COLORS[i]+'55' : CAT_COLORS[i]);
   document.getElementById('catLegend').innerHTML=labels.map((l,i)=>`<span class="leg-item"><span class="leg-dot" style="background:${CAT_COLORS[i]}"></span>${l} ${data[i]}</span>`).join('');
-  mkChart('catChart',{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:CAT_COLORS,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false}}}});
+  mkChart('catChart',{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false}},onClick:(e,els)=>{if(els.length)applyChartFilter('cat',labels[els[0].index]);}}});
 }
 function renderTeamChart(d) {
-  mkChart('teamChart',{type:'bar',data:{labels:Object.keys(d.by_team),datasets:[{label:'Cases',data:Object.values(d.by_team),backgroundColor:'#1D9E75',borderRadius:3}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:11}}},y:{ticks:{font:{size:10}},grid:{display:false}}}}});
+  const labels = Object.keys(d.by_team);
+  const data   = Object.values(d.by_team);
+  const colors = labels.map(l => crossFilter.team && crossFilter.team !== l ? 'rgba(29,158,117,0.3)' : '#1D9E75');
+  mkChart('teamChart',{type:'bar',data:{labels,datasets:[{label:'Cases',data,backgroundColor:colors,borderRadius:3}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:11}}},y:{ticks:{font:{size:10}},grid:{display:false}}},onClick:(e,els)=>{if(els.length)applyChartFilter('team',labels[els[0].index]);}}});
 }
 function renderRecChart(d) {
   const labels=Object.keys(d.by_rec),data=Object.values(d.by_rec);
+  const colors = labels.map((l,i) => crossFilter.rec && crossFilter.rec !== l ? REC_COLORS[i]+'55' : REC_COLORS[i]);
   document.getElementById('recLegend').innerHTML=labels.map((l,i)=>`<span class="leg-item"><span class="leg-dot" style="background:${REC_COLORS[i]}"></span>${l} ${data[i]}</span>`).join('');
-  mkChart('recChart',{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:REC_COLORS,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false}}}});
+  mkChart('recChart',{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false}},onClick:(e,els)=>{if(els.length)applyChartFilter('rec',labels[els[0].index]);}}});
 }
 
 // ── Monthly Insights ─────────────────────────────────────
