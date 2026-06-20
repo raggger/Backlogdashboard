@@ -113,7 +113,7 @@
   .tf-btn#tf-all.active  { background: var(--teal); border-color: var(--teal); color: #0d1b2a; }
   .tf-btn.tf-dms.active  { background: #185FA5; border-color: #185FA5; }
   .tf-btn.tf-dist.active { background: #D85A30; border-color: #D85A30; }
-  .tf-btn.tf-adv.active  { background: #7c6af5; border-color: #7c6af5; }
+  .tf-btn.tf-other.active { background: #4a5568; border-color: #4a5568; }
   /* Disabled state — non-Client Support views */
   .team-filter-bar.tf-disabled { opacity: 0.35; pointer-events: none; }
   .team-filter-bar.tf-disabled::after { content: 'Client Support only'; font-size: 10px; color: var(--text-hint); font-style: italic; margin-left: 8px; }
@@ -438,22 +438,22 @@
   <!-- Team group filter -->
   <div class="team-filter-bar" id="teamFilterBar">
     <span class="tf-label">Team</span>
-    <button class="tf-btn active" id="tf-all"  onclick="setTeamFilter('all',this)">All Teams</button>
+    <button class="tf-btn active" id="tf-all"   onclick="setTeamFilter('all',this)">All Teams</button>
     <button class="tf-btn tf-dms"  id="tf-dms"  onclick="setTeamFilter('dms',this)">Data Management</button>
     <button class="tf-btn tf-dist" id="tf-dist" onclick="setTeamFilter('dist',this)">Data Exchange</button>
     <button class="tf-btn tf-adv"  id="tf-adv"  onclick="setTeamFilter('adv',this)">Data Insights</button>
+    <button class="tf-btn tf-other" id="tf-other" onclick="setTeamFilter('other',this)">Other Functions</button>
   </div>
 
   <!-- DM Sub-team filter — only visible when Data Management is selected -->
   <div class="dm-sub-bar hidden" id="dmSubBar">
     <span class="dm-label">↳ DM team</span>
-    <button class="dm-btn active" id="dm-all"          onclick="setDmSub('all',this)">All DM</button>
-    <button class="dm-btn" id="dm-fundipedia"          onclick="setDmSub('dm-fundipedia',this)">Fundipedia</button>
-    <button class="dm-btn" id="dm-publifund"           onclick="setDmSub('dm-publifund',this)">publiFund</button>
-    <button class="dm-btn" id="dm-fundinfo"            onclick="setDmSub('dm-fundinfo',this)">Fundinfo</button>
-    <button class="dm-btn" id="dm-regfiling"           onclick="setDmSub('dm-regfiling',this)">Regulatory Filings</button>
-    <button class="dm-btn" id="dm-insights"            onclick="setDmSub('dm-insights',this)">Insights</button>
-    <button class="dm-btn" id="dm-others"              onclick="setDmSub('dm-others',this)">Others</button>
+    <button class="dm-btn active" id="dm-all"       onclick="setDmSub('all',this)">All DM</button>
+    <button class="dm-btn" id="dm-fundipedia"        onclick="setDmSub('dm-fundipedia',this)">Fundipedia</button>
+    <button class="dm-btn" id="dm-publifund"         onclick="setDmSub('dm-publifund',this)">publiFund</button>
+    <button class="dm-btn" id="dm-fundinfo"          onclick="setDmSub('dm-fundinfo',this)">Fundinfo</button>
+    <button class="dm-btn" id="dm-regfiling"         onclick="setDmSub('dm-regfiling',this)">Regulatory Filings</button>
+    <button class="dm-btn" id="dm-insights"          onclick="setDmSub('dm-insights',this)">Insights</button>
   </div>
 
   <div class="metrics" id="metricsRow"></div>
@@ -655,7 +655,7 @@ let selectedAccounts = new Set(); // account name multi-select
 
 // Product → Team mapping
 const PRODUCT_TEAM = {
-  // ── Data Management sub-teams ──────────────────────────
+  // ── Data Management ────────────────────────────────────
   'Fundipedia':'dms',
   'publiFund':'dms','Reg Outputs - Nexus':'dms',
   'Fundinfo.com':'dms','fundinfo Feeds':'dms','Fundinfo Access':'dms','fundinfo Statistics':'dms',
@@ -665,13 +665,16 @@ const PRODUCT_TEAM = {
   'KiiHUB':'dms','FundConnect Document Production':'dms','CSSP - SAAS':'dms','CSSP - POD':'dms',
   'FSQ RS':'dms','FSQ WL Portal':'dms',
   'Plus Digital':'dms','Web Tools':'dms','Finscape':'dms','FundConnect - Web Solutions':'dms',
-  'Data Provider':'dms','FE Invest':'dms','Nexus AI':'dms','EFS Dissemination Outbound':'dms',
   // ── Data Exchange ──────────────────────────────────────
   'EFS Dissemination':'dist','Feeds - FundConnect':'dist','EFS Feeds':'dist','FE Feeds':'dist',
   'Plus Datafeeds':'dist','Fund Collect':'dist','Plus Dissemination':'dist',
   // ── Data Insights ──────────────────────────────────────
   'MPS':'adv','CashCalc':'adv','Analytics':'adv','FE Trustnet':'adv','FinXL':'adv',
   'AdviserAsset':'adv','Command Deck':'adv',
+  // ── Other Functions ────────────────────────────────────
+  'Data Provider':'other','FE Invest':'other','Nexus AI':'other',
+  'EFS Dissemination Outbound':'other','FSQ IS':'other','FIH My Data':'other',
+  'Registration and Filing':'other','F360 Feeds':'other','F360.com':'other','FundSquare':'other',
 };
 
 // Product → DM Sub-team mapping
@@ -948,7 +951,12 @@ function getFilteredData() {
   let filtered = allActionCases;
   if (rtFilter)       filtered = filtered.filter(c => c['Case Record Type'] === rtFilter);
   if (hasAcctFilter)  filtered = filtered.filter(c => selectedAccounts.has(c['Account Name']));
-  if (currentTeamFilter !== 'all') filtered = filtered.filter(c => PRODUCT_TEAM[c['Product Name']] === currentTeamFilter);
+  if (currentTeamFilter !== 'all') {
+    filtered = filtered.filter(c => {
+      const t = PRODUCT_TEAM[c['Product Name']] || 'other';
+      return t === currentTeamFilter;
+    });
+  }
   // DM sub-team filter
   if (currentTeamFilter === 'dms' && currentDmSub !== 'all') {
     filtered = filtered.filter(c => {
@@ -1063,7 +1071,10 @@ function filteredCasesForBuckets(buckets) {
   return allActionCases.filter(c => {
     if (rtFilter && c['Case Record Type'] !== rtFilter) return false;
     if (selectedAccounts.size > 0 && !selectedAccounts.has(c['Account Name'])) return false;
-    if (currentTeamFilter !== 'all' && PRODUCT_TEAM[c['Product Name']] !== currentTeamFilter) return false;
+    if (currentTeamFilter !== 'all') {
+      const t = PRODUCT_TEAM[c['Product Name']] || 'other';
+      if (t !== currentTeamFilter) return false;
+    }
     if (currentTeamFilter === 'dms' && currentDmSub !== 'all') {
       const sub = PRODUCT_DM_SUB[c['Product Name']] || 'dm-others';
       if (sub !== currentDmSub) return false;
