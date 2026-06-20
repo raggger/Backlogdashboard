@@ -569,6 +569,20 @@ function getFilteredData() {
   const rtFilter = currentRecordTypeFilter();
   const sortObj = (obj, n=10) => Object.fromEntries(Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n));
 
+  // When no filters active, use pre-computed appData summaries (includes lt1 cases)
+  const noFilter = !rtFilter && currentTeamFilter === 'all' && !Object.values(crossFilter).some(Boolean);
+  if (noFilter) {
+    return {
+      total:      appData.all.total,
+      by_age:     appData.all.by_age,
+      by_product: sortObj(appData.all.by_product),
+      by_cat:     sortObj(appData.all.by_cat, 6),
+      by_team:    sortObj(appData.all.by_team),
+      by_rec:     appData.all.by_rec,
+      _filtered:  allActionCases,
+    };
+  }
+
   let filtered = allActionCases;
   if (rtFilter) filtered = filtered.filter(c => c['Case Record Type'] === rtFilter);
   if (currentTeamFilter !== 'all') filtered = filtered.filter(c => PRODUCT_TEAM[c['Product Name']] === currentTeamFilter);
@@ -585,10 +599,6 @@ function getFilteredData() {
     by_team[c['Case Owner Team']]  = (by_team[c['Case Owner Team']]||0) + 1;
     by_rec[c['Case Record Type']]  = (by_rec[c['Case Record Type']]||0) + 1;
   });
-
-  // Include lt1 from appData when no filters active
-  const noFilter = !rtFilter && currentTeamFilter === 'all' && !Object.values(crossFilter).some(Boolean);
-  if (noFilter) by_age['lt1'] = appData.all.by_age['lt1'] || 0;
 
   return {
     total: filtered.length,
@@ -647,6 +657,7 @@ function renderMetrics(d) {
   const plus5  = filteredCases.filter(c => c.age_bucket === '5plus').length;
 
   const noFilter = currentView === 'all' && currentTeamFilter === 'all' && !Object.values(crossFilter).some(Boolean);
+  // d.total already equals appData.all.total when noFilter (via getFilteredData)
   const pct = appData.all.total ? Math.round(d.total / appData.all.total * 100) : 100;
 
   const label1 = 'Total cases';
