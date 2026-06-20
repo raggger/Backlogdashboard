@@ -280,7 +280,10 @@
   <div class="drilldown" id="drilldown">
     <div class="dd-header">
       <span class="dd-title" id="ddTitle">Cases in band</span>
-      <button class="dd-close" onclick="closeDrilldown()">×</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="export-xls-btn" onclick="exportDrillXLS()" title="Export visible cases to Excel">⬇ Excel</button>
+        <button class="dd-close" onclick="closeDrilldown()">×</button>
+      </div>
     </div>
     <div class="dd-filters">
       <select id="ddFilterProduct" onchange="renderDrillTable()"><option value="">All Products</option></select>
@@ -289,6 +292,8 @@
       <input type="text" id="ddSearch" placeholder="Search case number…" oninput="renderDrillTable()">
       <span class="dd-count" id="ddCount"></span>
     </div>
+    <!-- Team breakdown mini-chart -->
+    <div id="ddTeamBreakdown" style="padding:10px 18px 4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid rgba(255,255,255,0.07);"></div>
     <div class="dd-table-wrap">
       <table class="dd-table">
         <thead><tr><th>Case #</th><th>Product</th><th>Case Category</th><th>Case Owner Team</th><th>Record Type</th><th>Date Opened</th><th>Target</th></tr></thead>
@@ -770,6 +775,26 @@ function renderDrillTable() {
   if (rec)    cases=cases.filter(c=>c['Case Record Type']===rec);
   if (search) cases=cases.filter(c=>c['Case Number'].toLowerCase().includes(search));
   document.getElementById('ddCount').textContent = cases.length + ' cases';
+
+  // Team breakdown bar
+  const teamCounts = {};
+  cases.forEach(c => { const t = c['Case Owner Team']||'Unknown'; teamCounts[t]=(teamCounts[t]||0)+1; });
+  const teamsSorted = Object.entries(teamCounts).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const total = cases.length || 1;
+  const TEAM_COLORS = ['#185FA5','#1D9E75','#D85A30','#7c6af5','#BA7517','#993556','#00d4aa','#888780'];
+  document.getElementById('ddTeamBreakdown').innerHTML = teamsSorted.length
+    ? `<span style="font-size:10px;font-weight:700;color:var(--text-hint);text-transform:uppercase;letter-spacing:0.06em;margin-right:6px;">By team</span>`
+      + teamsSorted.map(([t,n],i) => {
+          const pct = Math.round(n/total*100);
+          return `<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,0.06);border-radius:6px;padding:3px 9px;font-size:11px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:${TEAM_COLORS[i%TEAM_COLORS.length]};flex-shrink:0;"></span>
+            <span style="color:var(--text)">${t}</span>
+            <span style="color:var(--teal);font-weight:700;">${pct}%</span>
+            <span style="color:var(--text-muted)">(${n})</span>
+          </span>`;
+        }).join('')
+    : '';
+
   const tagMap = {40:TAG_STYLES['40'],50:TAG_STYLES['50'],100:TAG_STYLES['100'],0:TAG_STYLES['0']};
   document.getElementById('ddTbody').innerHTML = cases.map(c => {
     const tag = tagMap[c.target_reduction]||TAG_STYLES['monitor'];
@@ -784,10 +809,29 @@ function renderDrillTable() {
       <td><span style="background:${tag.bg};color:${tag.color};font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;">${tag.label}</span></td>
     </tr>`;
   }).join('');
+  // store for export
+  window._currentDrillCases = cases;
+}
+
+function exportDrillXLS() {
+  const cases = window._currentDrillCases || [];
+  if (!cases.length) return;
+  const title = document.getElementById('ddTitle').textContent;
+  const rows = [['Case Number','Product Name','Case Category','Case Owner Team','Record Type','Date Opened','Target']];
+  cases.forEach(c => {
+    const tgt = c.target_reduction === 100 ? '100% close' : c.target_reduction === 50 ? '50% reduce' : c.target_reduction === 40 ? '40% reduce' : 'On track';
+    rows.push([c['Case Number'],c['Product Name'],c['Case Category']||'',c['Case Owner Team'],c['Case Record Type'],c['Date Opened'],tgt]);
+  });
+  let csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `backlog_${title.replace(/[^a-z0-9]/gi,'_').toLowerCase()}.csv`;
+  a.click();
 }
 
 function renderAgeBars(d) {
-  const bucketTotals = DISPLAY_BUCKETS.map(b => ({
+  const bucketTotals = AGE_BANDS.map(b => ({
     label: b.label, color: b.color, pctKey: b.pctKey,
     n: b.keys.reduce((sum, k) => sum + (d.by_age[k] || 0), 0),
   }));
