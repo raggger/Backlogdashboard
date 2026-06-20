@@ -292,6 +292,18 @@
   .login-pw-wrap { position: relative; }
   .login-pw-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 13px; color: var(--text-hint); user-select: none; }
   .login-pw-toggle:hover { color: var(--text); }
+  .login-steps { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px 16px; }
+  .login-step { display: flex; gap: 12px; align-items: flex-start; }
+  .login-step-num { width: 20px; height: 20px; border-radius: 50%; background: var(--teal); color: #0d1b2a; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+  .login-step-text { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+  .login-step-text strong { color: var(--text); }
+  .login-step-text em { color: var(--teal); font-style: normal; font-weight: 600; }
+  .login-divider { text-align: center; font-size: 11px; color: var(--text-hint); margin: 12px 0; position: relative; }
+  .login-divider::before, .login-divider::after { content: ''; position: absolute; top: 50%; width: 44%; height: 1px; background: rgba(255,255,255,0.08); }
+  .login-divider::before { left: 0; }
+  .login-divider::after { right: 0; }
+  .login-btn-secondary { width: 100%; padding: 11px; background: transparent; border: 1px solid rgba(0,212,170,0.35); border-radius: 8px; color: var(--teal); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; margin-bottom: 4px; }
+  .login-btn-secondary:hover { background: rgba(0,212,170,0.08); border-color: var(--teal); }
   /* forgot modal */
   .forgot-overlay { position: fixed; inset: 0; z-index: 10000; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
   .forgot-overlay.hidden { display: none; }
@@ -321,20 +333,33 @@
     </div>
     <div class="login-title">Backlog Dashboard</div>
     <div class="login-sub">Sign in with your FE fundinfo email address to continue.</div>
+
+    <div class="login-steps">
+      <div class="login-step">
+        <div class="login-step-num">1</div>
+        <div class="login-step-text"><strong>First time?</strong> Enter your email below and click <em>Request access</em> — your password will be sent to you.</div>
+      </div>
+      <div class="login-step">
+        <div class="login-step-num">2</div>
+        <div class="login-step-text"><strong>Returning user?</strong> Enter your email and password to sign straight in.</div>
+      </div>
+    </div>
+
     <div class="login-field">
       <label class="login-label" for="loginEmail">Email address</label>
       <input class="login-input" id="loginEmail" type="email" placeholder="you@fefundinfo.com" autocomplete="email">
     </div>
-    <div class="login-field">
+    <div class="login-field" id="loginPwField">
       <label class="login-label" for="loginPw">Password</label>
       <div class="login-pw-wrap">
-        <input class="login-input" id="loginPw" type="password" placeholder="Enter password" autocomplete="current-password">
+        <input class="login-input" id="loginPw" type="password" placeholder="Enter your password" autocomplete="current-password">
         <span class="login-pw-toggle" onclick="togglePwVisibility()">👁</span>
       </div>
     </div>
     <div class="login-error" id="loginError"></div>
     <button class="login-btn" onclick="attemptLogin()">Sign in →</button>
-    <div class="login-forgot"><a onclick="showForgot()">Forgot password?</a></div>
+    <div class="login-divider">or</div>
+    <button class="login-btn-secondary" onclick="showForgot()">✉ First time? Request access</button>
     <div class="login-footer">© FE fundinfo · Strictly not for distribution</div>
   </div>
 </div>
@@ -342,13 +367,13 @@
 <!-- ── FORGOT PASSWORD MODAL ──────────────────────────────── -->
 <div class="forgot-overlay hidden" id="forgotOverlay">
   <div class="forgot-card">
-    <div class="forgot-icon">🔑</div>
-    <div class="forgot-title">Forgot your password?</div>
-    <div class="forgot-body">Enter your FE fundinfo email and we'll send your password hint to the dashboard administrator.</div>
+    <div class="forgot-icon">✉️</div>
+    <div class="forgot-title">Request dashboard access</div>
+    <div class="forgot-body">Enter your FE fundinfo email below. Your request will be sent to the dashboard administrator, who will reply with your password — usually within one business day.</div>
     <input class="forgot-email-input" id="forgotEmail" type="email" placeholder="you@fefundinfo.com">
-    <div class="forgot-success hidden" id="forgotSuccess">✓ Request sent — check your inbox shortly.</div>
-    <button class="forgot-btn" onclick="submitForgot()">Send password hint</button>
-    <div class="forgot-cancel" onclick="hideForgot()">Cancel</div>
+    <div class="forgot-success hidden" id="forgotSuccess">✓ Request sent! Check your inbox — your password will arrive shortly.</div>
+    <button class="forgot-btn" onclick="submitForgot()">Send access request</button>
+    <div class="forgot-cancel" onclick="hideForgot()">Cancel — I already have a password</div>
   </div>
 </div>
 
