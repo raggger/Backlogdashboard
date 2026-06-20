@@ -437,15 +437,15 @@ const CONFIG = {
 
 const CAT_COLORS = ['#185FA5','#1D9E75','#D85A30','#BA7517','#993556','#888780'];
 const REC_COLORS = ['#185FA5','#1D9E75','#D85A30','#BA7517','#993556','#888780'];
-const AGE_COLORS = { lt1:'#185FA5','1to2':'#EF9F27','2to3':'#EF9F27','3to4':'#D85A30','4to6':'#D85A30','6plus':'#A32D2D' };
-const AGE_LABELS = { lt1:'< 1 month','1to2':'1–2 months','2to3':'2–3 months','3to4':'3–4 months','4to6':'4–6 months','6plus':'6+ months' };
-const AGE_ORDER  = ['lt1','1to2','2to3','3to4','4to6','6plus'];
-// Consolidated display bands for age bar chart
-const DISPLAY_BUCKETS = [
-  { label:'< 1 month',  keys:['lt1'],         color:'#185FA5', pctKey:'0'   },
-  { label:'1-2 months', keys:['1to2','2to3'],  color:'#EF9F27', pctKey:'40'  },
-  { label:'3-4 months', keys:['3to4','4to6'],  color:'#D85A30', pctKey:'50'  },
-  { label:'5+ months',  keys:['6plus'],         color:'#A32D2D', pctKey:'100' },
+const AGE_COLORS = { lt1:'#185FA5','1to2':'#EF9F27','3to4':'#D85A30','5plus':'#A32D2D' };
+const AGE_LABELS = { lt1:'< 1 month','1to2':'1–2 months','3to4':'2–4 months','5plus':'5+ months' };
+const AGE_ORDER  = ['lt1','1to2','3to4','5plus'];
+// Display bands for age bar chart
+const AGE_BANDS = [
+  { label:'< 1 month',  keys:['lt1'],    color:'#185FA5', pctKey:'0'   },
+  { label:'1-2 months', keys:['1to2'],   color:'#EF9F27', pctKey:'40'  },
+  { label:'3-4 months', keys:['3to4'],   color:'#D85A30', pctKey:'50'  },
+  { label:'5+ months',  keys:['5plus'],  color:'#A32D2D', pctKey:'100' },
 ];
 const TAG_STYLES = {
   '40':  { bg:'#FFF0D6', color:'#854F0B', label:'40% reduce' },
@@ -644,7 +644,7 @@ function render() {
 function renderMetrics(d) {
   const filteredCases = d._filtered || allActionCases;
   const target = filteredCases.filter(c => c.target_reduction > 0).length;
-  const plus5  = filteredCases.filter(c => c.age_bucket === '4to6' || c.age_bucket === '6plus').length;
+  const plus5  = filteredCases.filter(c => c.age_bucket === '5plus').length;
 
   const noFilter = currentView === 'all' && currentTeamFilter === 'all' && !Object.values(crossFilter).some(Boolean);
   const pct = appData.all.total ? Math.round(d.total / appData.all.total * 100) : 100;
@@ -670,10 +670,10 @@ function renderMetrics(d) {
 
 function getTargetBands() {
   return [
-    { bucket:'1to2',  label:'1–2 months', pctKey:'40',      comboBuckets:['1to2','2to3'] },
-    { bucket:'3to5',  label:'3–5 months', pctKey:'50',      comboBuckets:['3to4','4to6'] },
-    { bucket:'5plus', label:'5+ months',  pctKey:'100',     comboBuckets:['6plus'] },
-    { bucket:'lt1',   label:'< 1 month',  pctKey:'0',       comboBuckets:['lt1'] },
+    { bucket:'1to2',  label:'1–2 months', pctKey:'40',  comboBuckets:['1to2'] },
+    { bucket:'3to4',  label:'3–4 months', pctKey:'50',  comboBuckets:['3to4'] },
+    { bucket:'5plus', label:'5+ months',  pctKey:'100', comboBuckets:['5plus'] },
+    { bucket:'lt1',   label:'< 1 month',  pctKey:'0',   comboBuckets:['lt1'] },
   ];
 }
 
@@ -855,9 +855,9 @@ function seedTodaySnapshot() {
   const now = new Date();
   const monthKey = now.toLocaleString('default',{month:'short',year:'numeric'}); // e.g. "Jun 2026"
 
-  const bucket1to2 = (age['1to2']||0) + (age['2to3']||0);
-  const bucket3to5 = (age['3to4']||0) + (age['4to6']||0);
-  const bucket5plus = (age['6plus']||0);
+  const bucket1to2 = (age['1to2']||0);
+  const bucket3to5 = (age['3to4']||0);
+  const bucket5plus = (age['5plus']||0);
 
   // Check if we already have an entry for today
   const today = now.toISOString().slice(0,10);
