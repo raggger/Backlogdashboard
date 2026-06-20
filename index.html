@@ -262,12 +262,12 @@
   </div>
 
   <!-- Team group filter -->
-  <div class="team-filter-bar">
+  <div class="team-filter-bar" id="teamFilterBar">
     <span class="tf-label">Team</span>
     <button class="tf-btn active" id="tf-all"  onclick="setTeamFilter('all',this)">All Teams</button>
     <button class="tf-btn tf-dms"  id="tf-dms"  onclick="setTeamFilter('dms',this)">Data Management</button>
-    <button class="tf-btn tf-dist" id="tf-dist" onclick="setTeamFilter('dist',this)">Distribution</button>
-    <button class="tf-btn tf-adv"  id="tf-adv"  onclick="setTeamFilter('adv',this)">Advisory</button>
+    <button class="tf-btn tf-dist" id="tf-dist" onclick="setTeamFilter('dist',this)">Data Exchange</button>
+    <button class="tf-btn tf-adv"  id="tf-adv"  onclick="setTeamFilter('adv',this)">Data Insights</button>
   </div>
 
   <div class="metrics" id="metricsRow"></div>
@@ -536,6 +536,11 @@ function setView(v, btn) {
   crossFilter = { product: null, cat: null, team: null, rec: null };
   updateCrossFilterUI();
 
+  // Always reset team filter to All Teams when switching record type tab
+  currentTeamFilter = 'all';
+  document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tf-all').classList.add('active');
+
   // Team filter only applies to Client Support record type
   const rtFilter = currentRecordTypeFilter();
   const isClientSupport = !rtFilter || rtFilter === 'Client Support';
@@ -544,10 +549,6 @@ function setView(v, btn) {
     bar.classList.remove('tf-disabled');
   } else {
     bar.classList.add('tf-disabled');
-    // Reset team filter back to All when leaving Client Support
-    currentTeamFilter = 'all';
-    document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('tf-all').classList.add('active');
   }
 
   closeDrilldown();
