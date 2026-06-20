@@ -216,7 +216,7 @@
   .mi-met-val { font-size: 26px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
   .mi-met-sub { font-size: 11px; color: var(--text-muted); }
   .bucket-1to2 { color: #EF9F27; }
-  .bucket-3to5 { color: var(--coral); }
+  .bucket-3to4 { color: var(--coral); }
   .bucket-5plus { color: var(--red); }
 
   .mi-trend-card { background: rgba(15,25,40,0.75); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.10); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
@@ -412,7 +412,7 @@
   </div>
 
   <div class="dash-footer">
-    <span>Reduction policy: 1–2 months = 40% &nbsp;|&nbsp; 3–5 months = 50% &nbsp;|&nbsp; 5+ months = 100% closure</span>
+    <span>Reduction policy: 1–2 months = 40% &nbsp;|&nbsp; 3–4 months = 50% &nbsp;|&nbsp; 5+ months = 100% closure</span>
     <span>Data refreshed daily via Power Automate</span>
   </div>
 </main>
@@ -422,7 +422,7 @@
 
   <div id="miConfigNotice" class="config-notice" style="display:none;">
     <span>⚠️</span>
-    <div><strong>SharePoint not yet configured</strong>Paste your SharePoint Excel sharing URLs into the CONFIG section at the top of index.html to enable live monthly data.</div>
+    <div><strong>Connecting to SharePoint…</strong> Monthly snapshots and closure data load automatically from SharePoint. If data doesn't appear, check that you are signed into your FE fundinfo Microsoft account in this browser.</div>
   </div>
 
   <p class="mi-intro">
@@ -441,7 +441,7 @@
       <span class="mi-trend-title">Backlog trend by age band — all months</span>
       <div class="mi-trend-legend">
         <span><span class="ldot" style="background:#EF9F27"></span>1–2 months</span>
-        <span><span class="ldot" style="background:#D85A30"></span>3–5 months</span>
+        <span><span class="ldot" style="background:#D85A30"></span>3–4 months</span>
         <span><span class="ldot" style="background:#A32D2D"></span>5+ months</span>
         <span class="mi-live-badge">● Live month</span>
       </div>
@@ -489,13 +489,11 @@
 
 <script>
 // ═══════════════════════════════════════════════════════════
-// CONFIG — paste your SharePoint sharing URLs here
+// CONFIG — SharePoint URLs
 // ═══════════════════════════════════════════════════════════
 const CONFIG = {
-  // Direct download URL for monthly_snapshots.xlsx (SharePoint → Share → Copy link, then change ?e=xxx to ?download=1)
-  SNAPSHOTS_URL: '',
-  // Direct download URL for backlog_closures.xlsx
-  CLOSURES_URL: '',
+  SNAPSHOTS_URL: 'https://financialexpress.sharepoint.com/:x:/r/sites/DataManagement2026/_layouts/15/Doc.aspx?sourcedoc=%7BD21CDFC5-086C-4932-AA79-B9CEBA996E97%7D&file=monthly_snapshots.xlsx&action=default&mobileredirect=true&download=1',
+  CLOSURES_URL:  'https://financialexpress.sharepoint.com/:x:/r/sites/DataManagement2026/_layouts/15/Doc.aspx?sourcedoc=%7B719B34B3-269A-49FB-BA48-572C182B737C%7D&file=backlog_closures.xlsx&action=default&mobileredirect=true&download=1',
 };
 // ═══════════════════════════════════════════════════════════
 
@@ -1077,7 +1075,7 @@ function seedTodaySnapshot() {
   const monthKey = now.toLocaleString('default',{month:'short',year:'numeric'}); // e.g. "Jun 2026"
 
   const bucket1to2 = (age['1to2']||0);
-  const bucket3to5 = (age['3to4']||0);
+  const bucket3to4 = (age['3to4']||0);
   const bucket5plus = (age['5plus']||0);
 
   // Check if we already have an entry for today
@@ -1088,7 +1086,7 @@ function seedTodaySnapshot() {
       date: today,
       month: monthKey,
       bucket_1to2: bucket1to2,
-      bucket_3to5: bucket3to5,
+      bucket_3to4: bucket3to4,
       bucket_5plus: bucket5plus,
       total: d.total,
       isLive: true
@@ -1104,7 +1102,7 @@ function parseSnapshotCSV(text) {
     const vals = lines[i].split(',').map(v => v.trim().replace(/"/g,''));
     const row = {};
     headers.forEach((h,j) => row[h] = vals[j]||'');
-    // Expected columns: Date, Month, Bucket_1to2, Bucket_3to5, Bucket_5plus, Total
+    // Expected columns: Date, Month, Bucket_1to2, Bucket_3to4, Bucket_5plus, Total
     if (row['Date'] && row['Month']) {
       const existing = monthlySnapshots.find(s => s.date === row['Date']);
       if (!existing) {
@@ -1112,7 +1110,7 @@ function parseSnapshotCSV(text) {
           date: row['Date'],
           month: row['Month'],
           bucket_1to2: parseInt(row['Bucket_1to2']||0),
-          bucket_3to5: parseInt(row['Bucket_3to5']||0),
+          bucket_3to4: parseInt(row['Bucket_3to4']||0),
           bucket_5plus: parseInt(row['Bucket_5plus']||0),
           total: parseInt(row['Total']||0),
           isLive: false
@@ -1161,7 +1159,7 @@ function getMonthlyAverages() {
       month,
       isLive: data.isLive,
       bucket_1to2: avg('bucket_1to2'),
-      bucket_3to5: avg('bucket_3to5'),
+      bucket_3to4: avg('bucket_3to4'),
       bucket_5plus: avg('bucket_5plus'),
       total: avg('total'),
       days: entries.length
@@ -1177,7 +1175,7 @@ function renderInsights() {
   if (current) {
     document.getElementById('miMetrics').innerHTML = `
       <div class="mi-met"><div class="mi-met-label">1–2 months (current)</div><div class="mi-met-val bucket-1to2">${current.bucket_1to2.toLocaleString()}</div><div class="mi-met-sub">${current.isLive ? 'Live count today' : 'Monthly average'} · 40% target</div></div>
-      <div class="mi-met"><div class="mi-met-label">3–5 months (current)</div><div class="mi-met-val bucket-3to5">${current.bucket_3to5.toLocaleString()}</div><div class="mi-met-sub">${current.isLive ? 'Live count today' : 'Monthly average'} · 50% target</div></div>
+      <div class="mi-met"><div class="mi-met-label">3–4 months (current)</div><div class="mi-met-val bucket-3to4">${current.bucket_3to4.toLocaleString()}</div><div class="mi-met-sub">${current.isLive ? 'Live count today' : 'Monthly average'} · 50% target</div></div>
       <div class="mi-met"><div class="mi-met-label">5+ months (current)</div><div class="mi-met-val bucket-5plus">${current.bucket_5plus.toLocaleString()}</div><div class="mi-met-sub">${current.isLive ? 'Live count today' : 'Monthly average'} · 100% close</div></div>
     `;
   }
@@ -1190,7 +1188,7 @@ function renderInsights() {
       labels,
       datasets: [
         { label:'1–2 months', data: monthly.map(m=>m.bucket_1to2), borderColor:'#EF9F27', backgroundColor:'rgba(239,159,39,0.08)', tension:0.3, pointRadius:5, pointHoverRadius:7, fill:true },
-        { label:'3–5 months', data: monthly.map(m=>m.bucket_3to5), borderColor:'#D85A30', backgroundColor:'rgba(216,90,48,0.08)', tension:0.3, pointRadius:5, pointHoverRadius:7, fill:true },
+        { label:'3–4 months', data: monthly.map(m=>m.bucket_3to4), borderColor:'#D85A30', backgroundColor:'rgba(216,90,48,0.08)', tension:0.3, pointRadius:5, pointHoverRadius:7, fill:true },
         { label:'5+ months',  data: monthly.map(m=>m.bucket_5plus), borderColor:'#A32D2D', backgroundColor:'rgba(163,45,45,0.08)', tension:0.3, pointRadius:5, pointHoverRadius:7, fill:true },
       ]
     },
@@ -1290,7 +1288,7 @@ function renderTeamPerf(monthly) {
 
   const rows = [
     { label:'1–2 months band', cur:cur.bucket_1to2, prev:prev.bucket_1to2 },
-    { label:'3–5 months band', cur:cur.bucket_3to5, prev:prev.bucket_3to5 },
+    { label:'3–4 months band', cur:cur.bucket_3to4, prev:prev.bucket_3to4 },
     { label:'5+ months band',  cur:cur.bucket_5plus, prev:prev.bucket_5plus },
     { label:'Total backlog',   cur:cur.total,       prev:prev.total },
   ];
