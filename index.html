@@ -64,6 +64,42 @@
   .page.active { display: block; }
 
   /* VIEW TOGGLE */
+  /* ACCOUNT FILTER */
+  .acct-filter-wrap { position: relative; margin-bottom: 14px; }
+  .acct-pill { display: flex; align-items: center; gap: 10px; background: rgba(10,20,35,0.6); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.14); border-radius: var(--radius-sm); padding: 8px 14px; cursor: pointer; transition: border-color 0.15s; user-select: none; }
+  .acct-pill:hover { border-color: rgba(255,255,255,0.28); }
+  .acct-pill.has-selection { border-color: var(--teal); }
+  .acct-pill-icon { font-size: 13px; color: var(--text-hint); }
+  .acct-pill-label { font-size: 12px; font-weight: 500; color: var(--text-muted); white-space: nowrap; flex: 1; }
+  .acct-pill.has-selection .acct-pill-label { color: var(--teal); font-weight: 700; }
+  .acct-pill-chevron { font-size: 10px; color: var(--text-hint); transition: transform 0.2s; }
+  .acct-pill.open .acct-pill-chevron { transform: rotate(180deg); }
+  .acct-pill-clear { font-size: 10px; padding: 2px 8px; border-radius: 10px; border: 1px solid rgba(0,212,170,0.5); background: rgba(0,212,170,0.1); color: var(--teal); cursor: pointer; }
+  .acct-pill-clear:hover { background: rgba(0,212,170,0.2); }
+  .acct-dropdown { position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: rgba(8,18,32,0.98); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.16); border-radius: var(--radius); box-shadow: 0 12px 40px rgba(0,0,0,0.6); z-index: 300; display: none; flex-direction: column; max-height: 380px; }
+  .acct-dropdown.open { display: flex; }
+  .acct-search-wrap { padding: 10px 12px 8px; border-bottom: 1px solid rgba(255,255,255,0.08); flex-shrink: 0; }
+  .acct-search { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 6px; padding: 7px 10px; font-size: 12px; color: var(--text); outline: none; box-sizing: border-box; }
+  .acct-search::placeholder { color: var(--text-hint); }
+  .acct-search:focus { border-color: var(--teal); }
+  .acct-list { overflow-y: auto; flex: 1; padding: 6px 0; }
+  .acct-list::-webkit-scrollbar { width: 4px; }
+  .acct-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+  .acct-item { display: flex; align-items: center; gap: 9px; padding: 7px 14px; cursor: pointer; font-size: 12px; color: var(--text-muted); transition: background 0.1s; }
+  .acct-item:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+  .acct-item.selected { color: var(--text); }
+  .acct-checkbox { width: 14px; height: 14px; border: 1.5px solid rgba(255,255,255,0.25); border-radius: 3px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
+  .acct-item.selected .acct-checkbox { background: var(--teal); border-color: var(--teal); }
+  .acct-checkbox-tick { color: #0d1b2a; font-size: 9px; font-weight: 900; display: none; }
+  .acct-item.selected .acct-checkbox-tick { display: block; }
+  .acct-count-badge { margin-left: auto; font-size: 10px; color: var(--text-hint); }
+  .acct-footer { padding: 8px 14px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .acct-footer-count { font-size: 11px; color: var(--text-hint); }
+  .acct-footer-actions { display: flex; gap: 12px; }
+  .acct-footer-btn { font-size: 11px; color: var(--teal); cursor: pointer; background: none; border: none; padding: 0; }
+  .acct-footer-btn:hover { text-decoration: underline; }
+  .acct-no-results { padding: 20px 14px; font-size: 12px; color: var(--text-hint); text-align: center; }
+
   .view-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 12px; flex-wrap: wrap; }
   .view-toggle { display: flex; background: rgba(10,20,35,0.6); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.12); border-radius: var(--radius-sm); overflow-x: auto; max-width: calc(100% - 140px); scrollbar-width: none; }
   .view-toggle::-webkit-scrollbar { display: none; }
@@ -248,6 +284,29 @@
 
 <!-- ═══════════════════════════════════════════ DASHBOARD PAGE -->
 <main class="main page active" id="page-dashboard">
+
+  <!-- Account Name filter -->
+  <div class="acct-filter-wrap" id="acctFilterWrap">
+    <div class="acct-pill" id="acctPill" onclick="toggleAcctDropdown()">
+      <span class="acct-pill-icon">🏢</span>
+      <span class="acct-pill-label" id="acctPillLabel">All Accounts</span>
+      <button class="acct-pill-clear" id="acctPillClear" style="display:none" onclick="clearAcctFilter(event)">✕ Clear</button>
+      <span class="acct-pill-chevron">▼</span>
+    </div>
+    <div class="acct-dropdown" id="acctDropdown">
+      <div class="acct-search-wrap">
+        <input class="acct-search" id="acctSearch" type="text" placeholder="Type to search accounts…" oninput="filterAcctList()" autocomplete="off">
+      </div>
+      <div class="acct-list" id="acctList"></div>
+      <div class="acct-footer">
+        <span class="acct-footer-count" id="acctFooterCount"></span>
+        <div class="acct-footer-actions">
+          <button class="acct-footer-btn" onclick="selectAllVisible()">Select all visible</button>
+          <button class="acct-footer-btn" onclick="clearAcctFilter()">Clear all</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div class="view-bar">
     <div class="view-toggle" id="viewToggle">
@@ -466,6 +525,7 @@ let charts = {}, monthlySnapshots = [], closureData = [], insightsLoaded = false
 let recordTypes = []; // dynamically built from data
 let currentTeamFilter = 'all'; // 'all' | 'dms' | 'dist' | 'adv'
 let crossFilter = { product: null, cat: null, team: null, rec: null };
+let selectedAccounts = new Set(); // account name multi-select
 
 // Product → Team mapping
 const PRODUCT_TEAM = {
@@ -502,7 +562,110 @@ async function loadData() {
   recordTypes = [...new Set(allActionCases.map(c => c['Case Record Type']).filter(Boolean))].sort();
 
   buildViewToggle();
+  buildAcctFilter();
   render();
+}
+
+// ── Account filter ───────────────────────────────────────
+let allAccountNames = [];
+
+function buildAcctFilter() {
+  allAccountNames = [...new Set(allActionCases.map(c => c['Account Name']).filter(a => a && a !== 'Unknown'))].sort();
+  renderAcctList('');
+  updateAcctPill();
+  // Close dropdown on outside click
+  document.addEventListener('click', e => {
+    if (!document.getElementById('acctFilterWrap').contains(e.target)) {
+      document.getElementById('acctDropdown').classList.remove('open');
+      document.getElementById('acctPill').classList.remove('open');
+    }
+  });
+}
+
+function renderAcctList(query) {
+  const q = query.toLowerCase();
+  const filtered = allAccountNames.filter(a => a.toLowerCase().includes(q));
+  const list = document.getElementById('acctList');
+  if (!filtered.length) {
+    list.innerHTML = `<div class="acct-no-results">No accounts match "${query}"</div>`;
+  } else {
+    list.innerHTML = filtered.map(a => {
+      const sel = selectedAccounts.has(a);
+      const count = allActionCases.filter(c => c['Account Name'] === a).length;
+      return `<div class="acct-item${sel?' selected':''}" onclick="toggleAcct('${a.replace(/'/g,"\\'")}')">
+        <div class="acct-checkbox"><span class="acct-checkbox-tick">✓</span></div>
+        <span style="flex:1">${a}</span>
+        <span class="acct-count-badge">${count}</span>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('acctFooterCount').textContent =
+    `${filtered.length} account${filtered.length!==1?'s':''} shown`;
+}
+
+function filterAcctList() {
+  renderAcctList(document.getElementById('acctSearch').value);
+}
+
+function toggleAcctDropdown() {
+  const pill = document.getElementById('acctPill');
+  const dd   = document.getElementById('acctDropdown');
+  const open = dd.classList.contains('open');
+  if (open) {
+    dd.classList.remove('open');
+    pill.classList.remove('open');
+  } else {
+    dd.classList.add('open');
+    pill.classList.add('open');
+    document.getElementById('acctSearch').value = '';
+    renderAcctList('');
+    setTimeout(() => document.getElementById('acctSearch').focus(), 50);
+  }
+}
+
+function toggleAcct(name) {
+  if (selectedAccounts.has(name)) selectedAccounts.delete(name);
+  else selectedAccounts.add(name);
+  renderAcctList(document.getElementById('acctSearch').value);
+  updateAcctPill();
+  render();
+}
+
+function selectAllVisible() {
+  const q = document.getElementById('acctSearch').value.toLowerCase();
+  allAccountNames.filter(a => a.toLowerCase().includes(q)).forEach(a => selectedAccounts.add(a));
+  renderAcctList(q);
+  updateAcctPill();
+  render();
+}
+
+function clearAcctFilter(e) {
+  if (e) e.stopPropagation();
+  selectedAccounts.clear();
+  document.getElementById('acctSearch').value = '';
+  renderAcctList('');
+  updateAcctPill();
+  render();
+}
+
+function updateAcctPill() {
+  const n = selectedAccounts.size;
+  const pill  = document.getElementById('acctPill');
+  const label = document.getElementById('acctPillLabel');
+  const clear = document.getElementById('acctPillClear');
+  if (n === 0) {
+    label.textContent = 'All Accounts';
+    pill.classList.remove('has-selection');
+    clear.style.display = 'none';
+  } else if (n === 1) {
+    label.textContent = [...selectedAccounts][0];
+    pill.classList.add('has-selection');
+    clear.style.display = '';
+  } else {
+    label.textContent = `${n} accounts selected`;
+    pill.classList.add('has-selection');
+    clear.style.display = '';
+  }
 }
 
 function buildViewToggle() {
@@ -573,9 +736,10 @@ function setTeamFilter(team, btn) {
 function getFilteredData() {
   const rtFilter = currentRecordTypeFilter();
   const sortObj = (obj, n=10) => Object.fromEntries(Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n));
+  const hasAcctFilter = selectedAccounts.size > 0;
 
-  // When no filters active, use pre-computed appData summaries (includes lt1 cases)
-  const noFilter = !rtFilter && currentTeamFilter === 'all' && !Object.values(crossFilter).some(Boolean);
+  // When no filters active at all, use pre-computed appData summaries (includes lt1 cases)
+  const noFilter = !rtFilter && currentTeamFilter === 'all' && !Object.values(crossFilter).some(Boolean) && !hasAcctFilter;
   if (noFilter) {
     return {
       total:      appData.all.total,
@@ -589,7 +753,8 @@ function getFilteredData() {
   }
 
   let filtered = allActionCases;
-  if (rtFilter) filtered = filtered.filter(c => c['Case Record Type'] === rtFilter);
+  if (rtFilter)       filtered = filtered.filter(c => c['Case Record Type'] === rtFilter);
+  if (hasAcctFilter)  filtered = filtered.filter(c => selectedAccounts.has(c['Account Name']));
   if (currentTeamFilter !== 'all') filtered = filtered.filter(c => PRODUCT_TEAM[c['Product Name']] === currentTeamFilter);
   if (crossFilter.product) filtered = filtered.filter(c => c['Product Name'] === crossFilter.product);
   if (crossFilter.cat)     filtered = filtered.filter(c => c['Case Category'] === crossFilter.cat);
@@ -661,7 +826,7 @@ function renderMetrics(d) {
   const target = filteredCases.filter(c => c.target_reduction > 0).length;
   const plus5  = filteredCases.filter(c => c.age_bucket === '5plus').length;
 
-  const noFilter = currentView === 'all' && currentTeamFilter === 'all' && !Object.values(crossFilter).some(Boolean);
+  const noFilter = currentView === 'all' && currentTeamFilter === 'all' && !Object.values(crossFilter).some(Boolean) && selectedAccounts.size === 0;
   // d.total already equals appData.all.total when noFilter (via getFilteredData)
   const pct = appData.all.total ? Math.round(d.total / appData.all.total * 100) : 100;
 
@@ -697,6 +862,7 @@ function filteredCasesForBuckets(buckets) {
   const rtFilter = currentRecordTypeFilter();
   return allActionCases.filter(c => {
     if (rtFilter && c['Case Record Type'] !== rtFilter) return false;
+    if (selectedAccounts.size > 0 && !selectedAccounts.has(c['Account Name'])) return false;
     if (currentTeamFilter !== 'all' && PRODUCT_TEAM[c['Product Name']] !== currentTeamFilter) return false;
     if (crossFilter.product && c['Product Name'] !== crossFilter.product) return false;
     if (crossFilter.cat     && c['Case Category'] !== crossFilter.cat) return false;
