@@ -111,11 +111,10 @@
     <div class="sp-banner-title">SharePoint Connection</div>
     <div class="sp-status">
       <div class="sp-dot" id="spDot"></div>
-      <span id="spStatusText">Not configured — submissions saved locally only. Click Configure to add your SharePoint URL.</span>
-      <button class="sp-edit-btn" onclick="toggleConfig()">Configure</button>
+      <span id="spStatusText">Connected to SharePoint — submissions will be saved automatically. Ensure you are signed into your FE fundinfo Microsoft account in this browser.</span>
     </div>
     <div class="sp-config-panel" id="spConfigPanel">
-      <input type="text" id="spUrlInput" placeholder="Paste SharePoint backlog_closures.xlsx sharing URL here">
+      <input type="text" id="spUrlInput" placeholder="Paste SharePoint backlog_closures.xlsx sharing URL here" style="display:none">
       <p>Paste the sharing link for backlog_closures.xlsx from SharePoint.</p>
       <button class="sp-save-btn" onclick="saveSpConfig()">Save</button>
     </div>
@@ -243,20 +242,11 @@
   document.getElementById('closureDate').valueAsDate = new Date();
 
   // SharePoint config
-  let spUrl = localStorage.getItem('sp_closures_url') || '';
+  let spUrl = 'https://financialexpress.sharepoint.com/:x:/r/sites/DataManagement2026/_layouts/15/Doc.aspx?sourcedoc=%7B719B34B3-269A-49FB-BA48-572C182B737C%7D&file=backlog_closures.xlsx&action=default&mobileredirect=true&download=1';
   updateSpStatus();
 
   function updateSpStatus() {
-    const dot = document.getElementById('spDot');
-    const txt = document.getElementById('spStatusText');
-    if (spUrl) {
-      dot.classList.add('connected');
-      txt.textContent = 'Connected to SharePoint — submissions will be saved to backlog_closures.xlsx';
-    } else {
-      dot.classList.remove('connected');
-      txt.textContent = 'Not configured — submissions saved locally only. Click Configure to add your SharePoint URL.';
-    }
-    if (spUrl) document.getElementById('spUrlInput').value = spUrl;
+    document.getElementById('spDot').classList.add('connected');
   }
 
   function toggleConfig() {
