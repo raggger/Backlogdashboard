@@ -118,6 +118,14 @@
   .team-filter-bar.tf-disabled { opacity: 0.35; pointer-events: none; }
   .team-filter-bar.tf-disabled::after { content: 'Client Support only'; font-size: 10px; color: var(--text-hint); font-style: italic; margin-left: 8px; }
 
+  /* DM SUB-TEAM FILTER */
+  .dm-sub-bar { display: flex; align-items: center; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; transition: opacity 0.2s; }
+  .dm-sub-bar.hidden { display: none; }
+  .dm-label { font-size: 10px; font-weight: 700; color: #185FA5; text-transform: uppercase; letter-spacing: 0.07em; margin-right: 2px; white-space: nowrap; }
+  .dm-btn { padding: 4px 12px; font-size: 11px; font-weight: 500; border-radius: var(--radius-sm); border: 1px solid rgba(24,95,165,0.3); background: rgba(24,95,165,0.06); color: var(--text-muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .dm-btn:hover { background: rgba(24,95,165,0.15); color: var(--text); border-color: rgba(24,95,165,0.5); }
+  .dm-btn.active { background: #185FA5; border-color: #185FA5; color: #fff; font-weight: 700; }
+
   /* CROSS-FILTER */
   .chart-card.cf-active { border-color: var(--teal) !important; box-shadow: 0 0 0 2px rgba(0,212,170,0.2); }
   .cf-clear-btn { font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 10px; border: 1px solid rgba(0,212,170,0.5); background: rgba(0,212,170,0.1); color: var(--teal); cursor: pointer; display: none; }
@@ -436,6 +444,18 @@
     <button class="tf-btn tf-adv"  id="tf-adv"  onclick="setTeamFilter('adv',this)">Data Insights</button>
   </div>
 
+  <!-- DM Sub-team filter — only visible when Data Management is selected -->
+  <div class="dm-sub-bar hidden" id="dmSubBar">
+    <span class="dm-label">↳ DM team</span>
+    <button class="dm-btn active" id="dm-all"          onclick="setDmSub('all',this)">All DM</button>
+    <button class="dm-btn" id="dm-fundipedia"          onclick="setDmSub('dm-fundipedia',this)">Fundipedia</button>
+    <button class="dm-btn" id="dm-publifund"           onclick="setDmSub('dm-publifund',this)">publiFund</button>
+    <button class="dm-btn" id="dm-fundinfo"            onclick="setDmSub('dm-fundinfo',this)">Fundinfo</button>
+    <button class="dm-btn" id="dm-regfiling"           onclick="setDmSub('dm-regfiling',this)">Regulatory Filings</button>
+    <button class="dm-btn" id="dm-insights"            onclick="setDmSub('dm-insights',this)">Insights</button>
+    <button class="dm-btn" id="dm-others"              onclick="setDmSub('dm-others',this)">Others</button>
+  </div>
+
   <div class="metrics" id="metricsRow"></div>
 
   <div class="target-panel">
@@ -629,22 +649,59 @@ let appData = null, currentView = 'all', currentBucket = null, allActionCases = 
 let charts = {}, monthlySnapshots = [], closureData = [], insightsLoaded = false;
 let recordTypes = []; // dynamically built from data
 let currentTeamFilter = 'all'; // 'all' | 'dms' | 'dist' | 'adv'
+let currentDmSub = 'all'; // 'all' | 'dm-fundipedia' | 'dm-publifund' | 'dm-fundinfo' | 'dm-regfiling' | 'dm-insights' | 'dm-others'
 let crossFilter = { product: null, cat: null, team: null, rec: null };
 let selectedAccounts = new Set(); // account name multi-select
 
 // Product → Team mapping
 const PRODUCT_TEAM = {
-  'publiFund':'dms','fundinfo Feeds':'dms','Plus Documents':'dms','Data Provider':'dms',
-  'FundConnect - Web Solutions':'dms','Plus Digital':'dms','Fundinfo Web Publishing Service':'dms',
-  'e-File':'dms','Fundinfo.com':'dms','KiiHUB':'dms','etfinfo.com':'dms','Fundinfo Access':'dms',
-  'Reg Outputs - Nexus':'dms','Publication- Membership':'dms','Fundipedia':'dms','FSQ RS':'dms',
-  'Web Tools':'dms','fundinfo Statistics':'dms','FSQ WL Portal':'dms',
-  'FundConnect Document Production':'dms','Nexus AI':'dms','fundinfo Document Dissemination':'dms',
-  'Factsheet Production':'dms','CSSP - SAAS':'dms','FE Invest':'dms','AIFMD Reporting':'dms','Finscape':'dms',
+  // ── Data Management sub-teams ──────────────────────────
+  'Fundipedia':'dms',
+  'publiFund':'dms','Reg Outputs - Nexus':'dms',
+  'Fundinfo.com':'dms','fundinfo Feeds':'dms','Fundinfo Access':'dms','fundinfo Statistics':'dms',
+  'etfinfo.com':'dms','Publication- Membership':'dms','Fundinfo Web Publishing Service':'dms',
+  'fundinfo Document Dissemination':'dms',
+  'e-File':'dms','Plus Documents':'dms','AIFMD Reporting':'dms','Factsheet Production':'dms',
+  'KiiHUB':'dms','FundConnect Document Production':'dms','CSSP - SAAS':'dms','CSSP - POD':'dms',
+  'FSQ RS':'dms','FSQ WL Portal':'dms',
+  'Plus Digital':'dms','Web Tools':'dms','Finscape':'dms','FundConnect - Web Solutions':'dms',
+  'Data Provider':'dms','FE Invest':'dms','Nexus AI':'dms','EFS Dissemination Outbound':'dms',
+  // ── Data Exchange ──────────────────────────────────────
   'EFS Dissemination':'dist','Feeds - FundConnect':'dist','EFS Feeds':'dist','FE Feeds':'dist',
   'Plus Datafeeds':'dist','Fund Collect':'dist','Plus Dissemination':'dist',
+  // ── Data Insights ──────────────────────────────────────
   'MPS':'adv','CashCalc':'adv','Analytics':'adv','FE Trustnet':'adv','FinXL':'adv',
   'AdviserAsset':'adv','Command Deck':'adv',
+};
+
+// Product → DM Sub-team mapping
+const PRODUCT_DM_SUB = {
+  'Fundipedia':                     'dm-fundipedia',
+  'publiFund':                      'dm-publifund',
+  'Reg Outputs - Nexus':            'dm-publifund',
+  'Fundinfo.com':                   'dm-fundinfo',
+  'fundinfo Feeds':                 'dm-fundinfo',
+  'Fundinfo Access':                'dm-fundinfo',
+  'fundinfo Statistics':            'dm-fundinfo',
+  'etfinfo.com':                    'dm-fundinfo',
+  'Publication- Membership':        'dm-fundinfo',
+  'Fundinfo Web Publishing Service':'dm-fundinfo',
+  'fundinfo Document Dissemination':'dm-fundinfo',
+  'e-File':                         'dm-regfiling',
+  'Plus Documents':                 'dm-regfiling',
+  'AIFMD Reporting':                'dm-regfiling',
+  'Factsheet Production':           'dm-regfiling',
+  'KiiHUB':                         'dm-regfiling',
+  'FundConnect Document Production':'dm-regfiling',
+  'CSSP - SAAS':                    'dm-regfiling',
+  'CSSP - POD':                     'dm-regfiling',
+  'FSQ RS':                         'dm-regfiling',
+  'FSQ WL Portal':                  'dm-regfiling',
+  'Plus Digital':                   'dm-insights',
+  'Web Tools':                      'dm-insights',
+  'Finscape':                       'dm-insights',
+  'FundConnect - Web Solutions':    'dm-insights',
+  // Everything else in DMS → dm-others
 };
 
 // ── Page navigation ──────────────────────────────────────
@@ -811,8 +868,12 @@ function setView(v, btn) {
 
   // Always reset team filter to All Teams when switching record type tab
   currentTeamFilter = 'all';
+  currentDmSub = 'all';
   document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tf-all').classList.add('active');
+  document.getElementById('dmSubBar').classList.add('hidden');
+  document.querySelectorAll('.dm-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('dm-all').classList.add('active');
 
   // Team filter only applies to Client Support record type
   const rtFilter = currentRecordTypeFilter();
@@ -830,7 +891,35 @@ function setView(v, btn) {
 
 function setTeamFilter(team, btn) {
   currentTeamFilter = team;
+  currentDmSub = 'all';
   document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  // Show/hide DM sub-team bar
+  const subBar = document.getElementById('dmSubBar');
+  if (team === 'dms') {
+    subBar.classList.remove('hidden');
+    // Reset sub-team buttons
+    document.querySelectorAll('.dm-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('dm-all').classList.add('active');
+  } else {
+    subBar.classList.add('hidden');
+  }
+
+  crossFilter = { product: null, cat: null, team: null, rec: null };
+  updateCrossFilterUI();
+  closeDrilldown();
+  render();
+}
+
+function setDmSub(sub, btn) {
+  currentDmSub = sub;
+  // Ensure Data Management is active on row 2
+  currentTeamFilter = 'dms';
+  document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tf-dms').classList.add('active');
+  // Update sub-bar active state
+  document.querySelectorAll('.dm-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   crossFilter = { product: null, cat: null, team: null, rec: null };
   updateCrossFilterUI();
@@ -843,8 +932,7 @@ function getFilteredData() {
   const sortObj = (obj, n=10) => Object.fromEntries(Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n));
   const hasAcctFilter = selectedAccounts.size > 0;
 
-  // When no filters active at all, use pre-computed appData summaries (includes lt1 cases)
-  const noFilter = !rtFilter && currentTeamFilter === 'all' && !Object.values(crossFilter).some(Boolean) && !hasAcctFilter;
+  const noFilter = !rtFilter && currentTeamFilter === 'all' && currentDmSub === 'all' && !Object.values(crossFilter).some(Boolean) && !hasAcctFilter;
   if (noFilter) {
     return {
       total:      appData.all.total,
@@ -861,6 +949,13 @@ function getFilteredData() {
   if (rtFilter)       filtered = filtered.filter(c => c['Case Record Type'] === rtFilter);
   if (hasAcctFilter)  filtered = filtered.filter(c => selectedAccounts.has(c['Account Name']));
   if (currentTeamFilter !== 'all') filtered = filtered.filter(c => PRODUCT_TEAM[c['Product Name']] === currentTeamFilter);
+  // DM sub-team filter
+  if (currentTeamFilter === 'dms' && currentDmSub !== 'all') {
+    filtered = filtered.filter(c => {
+      const sub = PRODUCT_DM_SUB[c['Product Name']] || 'dm-others';
+      return sub === currentDmSub;
+    });
+  }
   if (crossFilter.product) filtered = filtered.filter(c => c['Product Name'] === crossFilter.product);
   if (crossFilter.cat)     filtered = filtered.filter(c => c['Case Category'] === crossFilter.cat);
   if (crossFilter.team)    filtered = filtered.filter(c => c['Case Owner Team'] === crossFilter.team);
@@ -931,7 +1026,7 @@ function renderMetrics(d) {
   const target = filteredCases.filter(c => c.target_reduction > 0).length;
   const plus5  = filteredCases.filter(c => c.age_bucket === '5plus').length;
 
-  const noFilter = currentView === 'all' && currentTeamFilter === 'all' && !Object.values(crossFilter).some(Boolean) && selectedAccounts.size === 0;
+  const noFilter = currentView === 'all' && currentTeamFilter === 'all' && currentDmSub === 'all' && !Object.values(crossFilter).some(Boolean) && selectedAccounts.size === 0;
   // d.total already equals appData.all.total when noFilter (via getFilteredData)
   const pct = appData.all.total ? Math.round(d.total / appData.all.total * 100) : 100;
 
@@ -969,6 +1064,10 @@ function filteredCasesForBuckets(buckets) {
     if (rtFilter && c['Case Record Type'] !== rtFilter) return false;
     if (selectedAccounts.size > 0 && !selectedAccounts.has(c['Account Name'])) return false;
     if (currentTeamFilter !== 'all' && PRODUCT_TEAM[c['Product Name']] !== currentTeamFilter) return false;
+    if (currentTeamFilter === 'dms' && currentDmSub !== 'all') {
+      const sub = PRODUCT_DM_SUB[c['Product Name']] || 'dm-others';
+      if (sub !== currentDmSub) return false;
+    }
     if (crossFilter.product && c['Product Name'] !== crossFilter.product) return false;
     if (crossFilter.cat     && c['Case Category'] !== crossFilter.cat) return false;
     if (crossFilter.team    && c['Case Owner Team'] !== crossFilter.team) return false;
