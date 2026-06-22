@@ -1632,9 +1632,10 @@ function isSessionValid() {
   } catch { return false; }
 }
 
-function setSession() {
+function setSession(email) {
   localStorage.setItem(SESSION_KEY, JSON.stringify({
-    expires: Date.now() + SESSION_HOURS * 60 * 60 * 1000
+    expires: Date.now() + SESSION_HOURS * 60 * 60 * 1000,
+    email: email,
   }));
 }
 
@@ -1661,7 +1662,7 @@ function attemptLogin() {
   document.getElementById('loginPw').classList.remove('error');
 
   // Success
-  setSession();
+  setSession(email);
   document.getElementById('loginOverlay').classList.add('hidden');
   loadData();
 }
