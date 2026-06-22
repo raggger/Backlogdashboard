@@ -305,6 +305,16 @@
     return valid;
   }
 
+  const PA_URL = 'https://default82f41f1bd00f4f7ba740e0fd8515f2.72.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/54d01e5d868148b0841d5660c6f302bd/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=7NdbjsuBX_ci2DtQE4VSr_mV_St4CQcpJ95tTFCnxzo';
+
+  // Pull submitter email from dashboard login session
+  function getSubmitterEmail() {
+    try {
+      const s = JSON.parse(localStorage.getItem('fe_dash_auth') || '{}');
+      return s.email || '';
+    } catch { return ''; }
+  }
+
   async function submitForm() {
     if (!validate()) return;
     const btn = document.getElementById('submitBtn');
@@ -312,23 +322,33 @@
     btn.textContent = 'Submitting...';
 
     const row = {
-      Timestamp: new Date().toISOString(),
-      CaseNumber: document.getElementById('caseNumber').value.trim(),
-      ClosureDate: document.getElementById('closureDate').value,
-      ProductName: document.getElementById('productName').value,
+      Timestamp:      new Date().toISOString(),
+      CaseNumber:     document.getElementById('caseNumber').value.trim(),
+      ClosureDate:    document.getElementById('closureDate').value,
+      ProductName:    document.getElementById('productName').value,
       CaseRecordType: document.getElementById('caseRecordType').value,
-      Outcome: getOutcome(),
-      Description: document.getElementById('description').value.trim(),
-      SubmittedBy: document.getElementById('submitterName').value.trim()
+      Outcome:        getOutcome(),
+      Description:    document.getElementById('description').value.trim(),
+      SubmitterEmail: getSubmitterEmail(),
     };
 
-    // Save locally
-    const local = JSON.parse(localStorage.getItem('closures') || '[]');
-    local.push(row);
-    localStorage.setItem('closures', JSON.stringify(local));
+    try {
+      const resp = await fetch(PA_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(row),
+      });
+      if (resp.ok) {
+        showToast('success', 'Closure logged!', 'Case ' + row.CaseNumber + ' recorded as "' + row.Outcome + '".');
+        resetForm();
+      } else {
+        throw new Error('Server returned ' + resp.status);
+      }
+    } catch (err) {
+      console.error('Submission failed:', err);
+      showToast('error', 'Submission failed', 'Could not reach SharePoint. Please try again or contact your administrator.');
+    }
 
-    showToast('success', 'Closure logged!', `Case ${row.CaseNumber} recorded as "${row.Outcome}".`);
-    resetForm();
     btn.disabled = false;
     btn.textContent = 'Submit Closure';
   }
