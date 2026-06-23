@@ -379,7 +379,6 @@
     <div class="forgot-title">Request dashboard access</div>
     <div class="forgot-body">Enter your FE fundinfo email below. Your request will be sent to the dashboard administrator, who will reply with your password — usually within one business day.</div>
     <input class="forgot-email-input" id="forgotEmail" type="email" placeholder="you@fefundinfo.com">
-    <div class="forgot-success hidden" id="forgotSuccess">✓ Request sent! Check your inbox — your password will arrive shortly.</div>
     <button class="forgot-btn" onclick="submitForgot()">Send access request</button>
     <div class="forgot-cancel" onclick="hideForgot()">Cancel — I already have a password</div>
   </div>
@@ -393,6 +392,7 @@
     <a href="submit.html" class="nav-link">Log Case Closure</a>
   </nav>
   <div class="header-right">
+    <span id="userGreeting" style="font-size:12px;color:var(--teal);font-weight:600;margin-right:12px;"></span>
     <span class="snapshot-badge" id="snapshotBadge">Loading…</span>
   </div>
 </header>
@@ -418,6 +418,7 @@
         <div class="acct-footer-actions">
           <button class="acct-footer-btn" onclick="selectAllVisible()">Select all visible</button>
           <button class="acct-footer-btn" onclick="clearAcctFilter()">Clear all</button>
+          <button class="acct-footer-btn" style="background:var(--teal);color:#0d1b2a;padding:4px 14px;border-radius:6px;font-weight:700;" onclick="closeAcctDropdown()">Done ✓</button>
         </div>
       </div>
     </div>
@@ -795,8 +796,7 @@ function toggleAcctDropdown() {
   const dd   = document.getElementById('acctDropdown');
   const open = dd.classList.contains('open');
   if (open) {
-    dd.classList.remove('open');
-    pill.classList.remove('open');
+    closeAcctDropdown();
   } else {
     dd.classList.add('open');
     pill.classList.add('open');
@@ -806,12 +806,18 @@ function toggleAcctDropdown() {
   }
 }
 
+function closeAcctDropdown() {
+  document.getElementById('acctDropdown').classList.remove('open');
+  document.getElementById('acctPill').classList.remove('open');
+}
+
 function toggleAcct(name) {
   if (selectedAccounts.has(name)) selectedAccounts.delete(name);
   else selectedAccounts.add(name);
   renderAcctList(document.getElementById('acctSearch').value);
   updateAcctPill();
   render();
+  // Keep dropdown open — user clicks "Done" or clicks outside to close
 }
 
 function selectAllVisible() {
@@ -1708,6 +1714,7 @@ function attemptLogin() {
   // Success
   setSession(email);
   document.getElementById('loginOverlay').classList.add('hidden');
+  showUserGreeting();
   loadData();
 }
 
@@ -1733,11 +1740,10 @@ function hideForgot() {
 function submitForgot() {
   const email = document.getElementById('forgotEmail').value.trim();
   if (!email) return;
-  // Opens mail client addressed to admin with user's email in body
   const subject = encodeURIComponent('Backlog Dashboard — Password Request');
   const body    = encodeURIComponent(`Hi,\n\nUser ${email} has requested their password for the FE fundinfo Backlog Dashboard.\n\nPlease send them one of the agreed passwords.\n\nThank you.`);
   window.open(`mailto:${ADMIN_EMAIL}?subject=${subject}&body=${body}`);
-  document.getElementById('forgotSuccess').classList.remove('hidden');
+  hideForgot();
 }
 
 // Allow Enter key to submit login
@@ -1747,9 +1753,21 @@ document.addEventListener('keydown', e => {
   }
 });
 
+function showUserGreeting() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+    if (s.email) {
+      const firstName = s.email.split('@')[0].split('.')[0];
+      const capitalised = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+      document.getElementById('userGreeting').textContent = 'Hey ' + capitalised + ' 👋';
+    }
+  } catch {}
+}
+
 // ── INIT ─────────────────────────────────────────────────
 if (isSessionValid()) {
   document.getElementById('loginOverlay').classList.add('hidden');
+  showUserGreeting();
   loadData();
 } else {
   // Show login — loadData() called on successful auth above
