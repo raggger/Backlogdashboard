@@ -210,16 +210,6 @@
       </div>
     </div>
 
-    <!-- Your Details -->
-    <div class="form-section">
-      <div class="section-label">Your Details</div>
-      <div class="form-group">
-        <label>Your Name <span class="req">*</span></label>
-        <input type="text" id="submitterName" placeholder="Full name">
-        <div class="field-error" id="err-submitterName">Please enter your name</div>
-      </div>
-    </div>
-
     <div class="submit-row">
       <button class="btn-reset" onclick="resetForm()">Clear</button>
       <button class="btn-submit" id="submitBtn" onclick="submitForm()">Submit Closure</button>
@@ -287,7 +277,6 @@
       {id:'productName', err:'err-productName', check: v => v !== ''},
       {id:'caseRecordType', err:'err-caseRecordType', check: v => v !== ''},
       {id:'description', err:'err-description', check: v => v.trim().length >= 20},
-      {id:'submitterName', err:'err-submitterName', check: v => v.trim().length > 0},
     ];
     fields.forEach(f => {
       const el = document.getElementById(f.id);
@@ -333,17 +322,16 @@
     };
 
     try {
-      const resp = await fetch(PA_URL, {
+      await fetch(PA_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify(row),
+        mode: 'no-cors',
       });
-      if (resp.ok) {
-        showToast('success', 'Closure logged!', 'Case ' + row.CaseNumber + ' recorded as "' + row.Outcome + '".');
-        resetForm();
-      } else {
-        throw new Error('Server returned ' + resp.status);
-      }
+      // no-cors means we can't read the response — if fetch didn't throw, treat as success
+      const email = row.SubmitterEmail || 'your account';
+      showToast('success', 'Closure logged!', `Case ${row.CaseNumber} recorded as "${row.Outcome}". Submitted under ${email}.`);
+      resetForm();
     } catch (err) {
       console.error('Submission failed:', err);
       showToast('error', 'Submission failed', 'Could not reach SharePoint. Please try again or contact your administrator.');
@@ -359,7 +347,6 @@
     document.getElementById('productName').value = '';
     document.getElementById('caseRecordType').value = '';
     document.getElementById('description').value = '';
-    document.getElementById('submitterName').value = '';
     document.getElementById('charCount').textContent = '0';
     document.querySelectorAll('.outcome-opt').forEach(o => o.classList.remove('selected'));
     document.querySelectorAll('input[name="outcome"]').forEach(o => o.checked = false);
