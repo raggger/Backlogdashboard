@@ -559,6 +559,24 @@
     Analyst contributions are pulled from the case closure log.
   </p>
 
+  <!-- Team selector -->
+  <div style="margin-bottom:18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <span style="font-size:10px;font-weight:700;color:var(--text-hint);text-transform:uppercase;letter-spacing:0.07em;">View</span>
+    <select id="miTeamSelect" onchange="renderInsights()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);border-radius:6px;padding:7px 12px;font-size:12px;color:var(--text);outline:none;min-width:180px;">
+      <option value="All Cases">All Cases</option>
+      <option value="Client Support">Client Support</option>
+      <option value="Data Management">Data Management</option>
+      <option value="Fundipedia">↳ Fundipedia</option>
+      <option value="publiFund">↳ publiFund</option>
+      <option value="Fundinfo">↳ Fundinfo</option>
+      <option value="Regulatory Filings">↳ Regulatory Filings</option>
+      <option value="Insights">↳ Insights</option>
+      <option value="Data Exchange">Data Exchange</option>
+      <option value="Data Insights">Data Insights</option>
+      <option value="Other Functions">Other Functions</option>
+    </select>
+  </div>
+
   <!-- Current month summary metrics -->
   <div class="mi-metrics" id="miMetrics"></div>
 
@@ -1285,29 +1303,44 @@ async function loadInsightsData() {
 }
 
 function seedTodaySnapshot() {
-  // Build today's entry from live backlog_data.json using new 3-bucket system
   const d = appData.all;
   const age = d.by_age || {};
   const now = new Date();
-  const monthKey = now.toLocaleString('default',{month:'short',year:'numeric'}); // e.g. "Jun 2026"
-
-  const bucket1to2 = (age['1to2']||0);
-  const bucket3to4 = (age['3to4']||0);
-  const bucket5plus = (age['5plus']||0);
-
-  // Check if we already have an entry for today
+  const monthKey = now.toLocaleString('default',{month:'short',year:'numeric'});
   const today = now.toISOString().slice(0,10);
-  const existing = monthlySnapshots.find(s => s.date === today);
-  if (!existing) {
-    monthlySnapshots.push({
-      date: today,
-      month: monthKey,
-      bucket_1to2: bucket1to2,
-      bucket_3to4: bucket3to4,
-      bucket_5plus: bucket5plus,
-      total: d.total,
-      isLive: true
+
+  // If script outputs snapshot_teams, seed each team row
+  if (appData.snapshot_teams && appData.snapshot_teams.length > 0) {
+    appData.snapshot_teams.forEach(st => {
+      const existing = monthlySnapshots.find(s => s.date === today && s.team === st.Team);
+      if (!existing) {
+        monthlySnapshots.push({
+          date: today,
+          month: monthKey,
+          team: st.Team,
+          bucket_1to2: st.Bucket_1to2,
+          bucket_3to4: st.Bucket_3to4,
+          bucket_5plus: st.Bucket_5plus,
+          total: st.Total,
+          isLive: true
+        });
+      }
     });
+  } else {
+    // Fallback: seed just All Cases from appData.all
+    const existing = monthlySnapshots.find(s => s.date === today && s.team === 'All Cases');
+    if (!existing) {
+      monthlySnapshots.push({
+        date: today,
+        month: monthKey,
+        team: 'All Cases',
+        bucket_1to2: (age['1to2']||0),
+        bucket_3to4: (age['3to4']||0),
+        bucket_5plus: (age['5plus']||0),
+        total: d.total,
+        isLive: true
+      });
+    }
   }
 }
 
@@ -1319,13 +1352,15 @@ function parseSnapshotCSV(text) {
     const vals = lines[i].split(',').map(v => v.trim().replace(/"/g,''));
     const row = {};
     headers.forEach((h,j) => row[h] = vals[j]||'');
-    // Expected columns: Date, Month, Bucket_1to2, Bucket_3to4, Bucket_5plus, Total
     if (row['Date'] && row['Month']) {
-      const existing = monthlySnapshots.find(s => s.date === row['Date']);
+      const team = row['Team'] || 'All Cases';
+      const key = row['Date'] + '|' + team;
+      const existing = monthlySnapshots.find(s => s.date === row['Date'] && s.team === team);
       if (!existing) {
         monthlySnapshots.push({
           date: row['Date'],
           month: row['Month'],
+          team: team,
           bucket_1to2: parseInt(row['Bucket_1to2']||0),
           bucket_3to4: parseInt(row['Bucket_3to4']||0),
           bucket_5plus: parseInt(row['Bucket_5plus']||0),
@@ -1360,10 +1395,12 @@ function parseClosuresCSV(text) {
   }
 }
 
-function getMonthlyAverages() {
-  // Group snapshots by month, compute averages for completed months, live count for current
+function getMonthlyAverages(teamFilter) {
+  teamFilter = teamFilter || 'All Cases';
+  const filtered = monthlySnapshots.filter(s => s.team === teamFilter);
+
   const byMonth = {};
-  monthlySnapshots.forEach(s => {
+  filtered.forEach(s => {
     if (!byMonth[s.month]) byMonth[s.month] = { entries:[], isLive: false };
     byMonth[s.month].entries.push(s);
     if (s.isLive) byMonth[s.month].isLive = true;
@@ -1385,7 +1422,8 @@ function getMonthlyAverages() {
 }
 
 function renderInsights() {
-  const monthly = getMonthlyAverages();
+  const teamFilter = document.getElementById('miTeamSelect').value;
+  const monthly = getMonthlyAverages(teamFilter);
   const current = monthly[monthly.length - 1];
 
   // Summary metrics for current month
@@ -1395,7 +1433,12 @@ function renderInsights() {
       <div class="mi-met"><div class="mi-met-label">3–4 months (current)</div><div class="mi-met-val bucket-3to4">${current.bucket_3to4.toLocaleString()}</div><div class="mi-met-sub">${current.isLive ? 'Live count today' : 'Monthly average'} · 50% target</div></div>
       <div class="mi-met"><div class="mi-met-label">5+ months (current)</div><div class="mi-met-val bucket-5plus">${current.bucket_5plus.toLocaleString()}</div><div class="mi-met-sub">${current.isLive ? 'Live count today' : 'Monthly average'} · 100% close</div></div>
     `;
+  } else {
+    document.getElementById('miMetrics').innerHTML = '<div class="no-data-msg" style="grid-column:1/-1;">No snapshot data for this team yet.</div>';
   }
+
+  // Update trend chart title
+  document.querySelector('.mi-trend-title').textContent = `Backlog trend by age band — ${teamFilter}`;
 
   // Trend chart
   const labels = monthly.map(m => m.isLive ? m.month + ' ●' : m.month);
@@ -1441,7 +1484,7 @@ function renderInsights() {
   sel.innerHTML = '<option value="all">All time</option>' + months.map(m=>`<option value="${m}">${m}</option>`).join('');
 
   renderAnalystTable();
-  renderTeamPerf(monthly);
+  renderTeamPerf(monthly, teamFilter);
 }
 
 function renderAnalystTable() {
@@ -1493,13 +1536,13 @@ function renderAnalystTable() {
     </table>`;
 }
 
-function renderTeamPerf(monthly) {
+function renderTeamPerf(monthly, teamFilter) {
   if (monthly.length < 2) {
     document.getElementById('teamPerfWrap').innerHTML = '<div class="no-data-msg">Team trends appear after two months of data.</div>';
     return;
   }
 
-  // Use current vs previous month totals as a proxy (full team breakdown needs more snapshot columns)
+  // Use current vs previous month totals
   const cur = monthly[monthly.length-1];
   const prev = monthly[monthly.length-2];
 
@@ -1511,6 +1554,7 @@ function renderTeamPerf(monthly) {
   ];
 
   document.getElementById('teamPerfWrap').innerHTML = `
+    <p style="font-size:11px;color:var(--teal);margin-bottom:10px;font-weight:600;">Viewing: ${teamFilter || 'All Cases'}</p>
     <table class="team-perf-table">
       <thead><tr><th>Band</th><th>${prev.month}</th><th>${cur.month}</th><th>Change</th></tr></thead>
       <tbody>${rows.map(r => {
