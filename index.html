@@ -776,7 +776,7 @@ function renderAcctList(query) {
     list.innerHTML = filtered.map(a => {
       const sel = selectedAccounts.has(a);
       const count = allActionCases.filter(c => c['Account Name'] === a).length;
-      return `<div class="acct-item${sel?' selected':''}" onclick="toggleAcct('${a.replace(/'/g,"\\'")}')">
+      return `<div class="acct-item${sel?' selected':''}" onclick="event.stopPropagation();toggleAcct('${a.replace(/'/g,"\\'")}')">
         <div class="acct-checkbox"><span class="acct-checkbox-tick">✓</span></div>
         <span style="flex:1">${a}</span>
         <span class="acct-count-badge">${count}</span>
