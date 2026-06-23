@@ -1387,13 +1387,13 @@ function parseClosuresCSV(text) {
     const vals = lines[i].split(',').map(v => v.trim().replace(/"/g,''));
     const row = {};
     headers.forEach((h,j) => row[h] = vals[j]||'');
-    if (row['SubmittedBy'] || row['submitterName']) {
+    if (row['SubmitterEmail'] || row['SubmittedBy'] || row['submitterName']) {
       closureData.push({
         caseNumber:   row['CaseNumber']    || row['caseNumber']    || '',
         product:      row['ProductName']   || row['productName']   || '',
         recordType:   row['CaseRecordType']|| row['caseRecordType']|| '',
         outcome:      row['Outcome']       || row['outcome']       || '',
-        submittedBy:  row['SubmittedBy']   || row['submitterName'] || '',
+        submittedBy:  row['SubmitterEmail'] || row['SubmittedBy']   || row['submitterName'] || '',
         closureDate:  row['ClosureDate']   || row['closureDate']   || '',
         description:  row['Description']   || row['description']   || '',
       });
