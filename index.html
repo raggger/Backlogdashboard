@@ -563,18 +563,18 @@
   <!-- Team selector -->
   <div style="margin-bottom:18px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
     <span style="font-size:10px;font-weight:700;color:var(--text-hint);text-transform:uppercase;letter-spacing:0.07em;">View</span>
-    <select id="miTeamSelect" onchange="renderInsights()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);border-radius:6px;padding:7px 12px;font-size:12px;color:var(--text);outline:none;min-width:180px;">
-      <option value="All Cases">All Cases</option>
-      <option value="Client Support">Client Support</option>
-      <option value="Data Management">Data Management</option>
-      <option value="Fundipedia">↳ Fundipedia</option>
-      <option value="publiFund">↳ publiFund</option>
-      <option value="Fundinfo">↳ Fundinfo</option>
-      <option value="Regulatory Filings">↳ Regulatory Filings</option>
-      <option value="Insights">↳ Insights</option>
-      <option value="Data Exchange">Data Exchange</option>
-      <option value="Data Insights">Data Insights</option>
-      <option value="Other Functions">Other Functions</option>
+    <select id="miTeamSelect" onchange="renderInsights()" style="background:rgba(15,25,40,0.95);border:1px solid rgba(255,255,255,0.14);border-radius:6px;padding:7px 12px;font-size:12px;color:var(--text);outline:none;min-width:180px;">
+      <option value="All Cases" style="background:#0d1b2a;">All Cases</option>
+      <option value="Client Support" style="background:#0d1b2a;">Client Support</option>
+      <option value="Data Management" style="background:#0d1b2a;">Data Management</option>
+      <option value="Fundipedia" style="background:#0d1b2a;">↳ Fundipedia</option>
+      <option value="publiFund" style="background:#0d1b2a;">↳ publiFund</option>
+      <option value="Fundinfo" style="background:#0d1b2a;">↳ Fundinfo</option>
+      <option value="Regulatory Filings" style="background:#0d1b2a;">↳ Regulatory Filings</option>
+      <option value="Insights" style="background:#0d1b2a;">↳ Insights</option>
+      <option value="Data Exchange" style="background:#0d1b2a;">Data Exchange</option>
+      <option value="Data Insights" style="background:#0d1b2a;">Data Insights</option>
+      <option value="Other Functions" style="background:#0d1b2a;">Other Functions</option>
     </select>
   </div>
 
@@ -1312,7 +1312,7 @@ function seedTodaySnapshot() {
   const d = appData.all;
   const age = d.by_age || {};
   const now = new Date();
-  const monthKey = now.toLocaleString('default',{month:'short',year:'numeric'});
+  const monthKey = now.toLocaleDateString('en-GB',{month:'short'}) + "'" + String(now.getFullYear()).slice(2);
   const today = now.toISOString().slice(0,10);
 
   // If script outputs snapshot_teams, seed each team row
@@ -1351,13 +1351,42 @@ function seedTodaySnapshot() {
 }
 
 function parseSnapshotCSV(text) {
+  // Convert Excel serial date to JS Date
+  function fromSerial(serial) {
+    const d = new Date(1899, 11, 30);
+    d.setDate(d.getDate() + Math.floor(serial));
+    return d;
+  }
+  function formatMonth(val) {
+    // If already a string like "Jun 2026", shorten to "Jun'26"
+    if (typeof val === 'string' && val.match(/[A-Za-z]/)) {
+      const parts = val.trim().split(/\s+/);
+      if (parts.length === 2 && parts[1].length === 4) return parts[0] + "'" + parts[1].slice(2);
+      return val;
+    }
+    // If serial number, convert
+    if (!isNaN(Number(val)) && Number(val) > 30000) {
+      const d = fromSerial(Number(val));
+      return d.toLocaleDateString('en-GB', {month:'short'}) + "'" + String(d.getFullYear()).slice(2);
+    }
+    return String(val);
+  }
+  function formatDate(val) {
+    if (typeof val === 'string' && val.includes('/')) return val;
+    if (!isNaN(Number(val)) && Number(val) > 30000) {
+      const d = fromSerial(Number(val));
+      return d.toLocaleDateString('en-GB', {day:'2-digit', month:'2-digit', year:'numeric'});
+    }
+    return String(val);
+  }
+
   try {
     const data = JSON.parse(text);
     if (!Array.isArray(data)) return;
     data.forEach(row => {
       const team = String(row['Team'] || 'All Cases');
-      const dt = String(row['Date'] || '');
-      const mn = String(row['Month'] || '');
+      const dt = formatDate(row['Date'] || '');
+      const mn = formatMonth(row['Month'] || '');
       if (!dt || !mn) return;
       const existing = monthlySnapshots.find(s => s.date === dt && s.team === team);
       if (!existing) {
