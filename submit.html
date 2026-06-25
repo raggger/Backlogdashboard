@@ -321,16 +321,12 @@
       SubmitterEmail: getSubmitterEmail(),
     };
 
-    try {
-      await fetch(PA_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(row),
-        mode: 'no-cors',
-      });
-    } catch (e) {
-      // no-cors: can't read response but POST was sent
-    }
+    // POST to Power Automate — CORS blocks reading response but POST goes through
+    fetch(PA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(row),
+    }).catch(() => {});
     const email = row.SubmitterEmail || 'your account';
     showToast('success', 'Closure logged!', `Case ${row.CaseNumber} recorded as "${row.Outcome}". Submitted under ${email}.`);
     resetForm();
