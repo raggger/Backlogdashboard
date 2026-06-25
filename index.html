@@ -550,7 +550,7 @@
 
   <div id="miConfigNotice" class="config-notice" style="display:none;">
     <span>⚠️</span>
-    <div><strong>Connecting to SharePoint…</strong> Monthly snapshots and closure data load automatically from SharePoint. If data doesn't appear, check that you are signed into your FE fundinfo Microsoft account in this browser.</div>
+    <div><strong>Data loading…</strong> Monthly snapshots and closure data are loaded from GitHub. If data doesn't appear, the JSON files may not have been pushed yet.</div>
   </div>
 
   <p class="mi-intro">
@@ -638,8 +638,8 @@
 // CONFIG — SharePoint URLs
 // ═══════════════════════════════════════════════════════════
 const CONFIG = {
-  SNAPSHOTS_URL: 'https://financialexpress.sharepoint.com/:x:/r/sites/DataManagement2026/_layouts/15/Doc.aspx?sourcedoc=%7BD21CDFC5-086C-4932-AA79-B9CEBA996E97%7D&file=monthly_snapshots.xlsx&action=default&mobileredirect=true&download=1',
-  CLOSURES_URL:  'https://financialexpress.sharepoint.com/:x:/r/sites/DataManagement2026/_layouts/15/Doc.aspx?sourcedoc=%7B719B34B3-269A-49FB-BA48-572C182B737C%7D&file=backlog_closures.xlsx&action=default&mobileredirect=true&download=1',
+  SNAPSHOTS_URL: 'snapshots.json',
+  CLOSURES_URL:  'closures.json',
 };
 // ═══════════════════════════════════════════════════════════
 
@@ -1351,22 +1351,18 @@ function seedTodaySnapshot() {
 }
 
 function parseSnapshotCSV(text) {
-  const lines = text.trim().split('\n');
-  if (lines.length < 2) return;
-  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g,''));
-  for (let i = 1; i < lines.length; i++) {
-    const vals = lines[i].split(',').map(v => v.trim().replace(/"/g,''));
-    const row = {};
-    headers.forEach((h,j) => row[h] = vals[j]||'');
-    if (row['Date'] && row['Month']) {
-      const team = row['Team'] || 'All Cases';
-      const key = row['Date'] + '|' + team;
-      const existing = monthlySnapshots.find(s => s.date === row['Date'] && s.team === team);
+  try {
+    const data = JSON.parse(text);
+    if (!Array.isArray(data)) return;
+    data.forEach(row => {
+      const team = String(row['Team'] || 'All Cases');
+      const dt = String(row['Date'] || '');
+      const mn = String(row['Month'] || '');
+      if (!dt || !mn) return;
+      const existing = monthlySnapshots.find(s => s.date === dt && s.team === team);
       if (!existing) {
         monthlySnapshots.push({
-          date: row['Date'],
-          month: row['Month'],
-          team: team,
+          date: dt, month: mn, team: team,
           bucket_1to2: parseInt(row['Bucket_1to2']||0),
           bucket_3to4: parseInt(row['Bucket_3to4']||0),
           bucket_5plus: parseInt(row['Bucket_5plus']||0),
@@ -1374,31 +1370,30 @@ function parseSnapshotCSV(text) {
           isLive: false
         });
       }
-    }
-  }
+    });
+  } catch(e) { console.warn('Snapshot parse error:', e); }
 }
 
 function parseClosuresCSV(text) {
-  const lines = text.trim().split('\n');
-  if (lines.length < 2) return;
-  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g,''));
-  closureData = [];
-  for (let i = 1; i < lines.length; i++) {
-    const vals = lines[i].split(',').map(v => v.trim().replace(/"/g,''));
-    const row = {};
-    headers.forEach((h,j) => row[h] = vals[j]||'');
-    if (row['SubmitterEmail'] || row['SubmittedBy'] || row['submitterName']) {
-      closureData.push({
-        caseNumber:   row['CaseNumber']    || row['caseNumber']    || '',
-        product:      row['ProductName']   || row['productName']   || '',
-        recordType:   row['CaseRecordType']|| row['caseRecordType']|| '',
-        outcome:      row['Outcome']       || row['outcome']       || '',
-        submittedBy:  row['SubmitterEmail'] || row['SubmittedBy']   || row['submitterName'] || '',
-        closureDate:  row['ClosureDate']   || row['closureDate']   || '',
-        description:  row['Description']   || row['description']   || '',
-      });
-    }
-  }
+  try {
+    const data = JSON.parse(text);
+    if (!Array.isArray(data)) return;
+    closureData = [];
+    data.forEach(row => {
+      const submitter = row['SubmitterEmail'] || row['SubmittedBy'] || row['submitterName'] || '';
+      if (submitter) {
+        closureData.push({
+          caseNumber:  String(row['CaseNumber']    || row['caseNumber']    || ''),
+          product:     String(row['ProductName']   || row['productName']   || ''),
+          recordType:  String(row['CaseRecordType']|| row['caseRecordType']|| ''),
+          outcome:     String(row['Outcome']       || row['outcome']       || ''),
+          submittedBy: submitter,
+          closureDate: String(row['ClosureDate']   || row['closureDate']   || ''),
+          description: String(row['Description']   || row['description']   || ''),
+        });
+      }
+    });
+  } catch(e) { console.warn('Closures parse error:', e); }
 }
 
 function getMonthlyAverages(teamFilter) {
