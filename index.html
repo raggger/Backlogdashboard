@@ -1312,7 +1312,7 @@ function seedTodaySnapshot() {
   const d = appData.all;
   const age = d.by_age || {};
   const now = new Date();
-  const monthKey = now.toLocaleDateString('en-GB',{month:'short'}) + "'" + String(now.getFullYear()).slice(2);
+  const monthKey = now.toLocaleString('default',{month:'short',year:'numeric'});
   const today = now.toISOString().slice(0,10);
 
   // If script outputs snapshot_teams, seed each team row
@@ -1358,16 +1358,12 @@ function parseSnapshotCSV(text) {
     return d;
   }
   function formatMonth(val) {
-    // If already a string like "Jun 2026", shorten to "Jun'26"
-    if (typeof val === 'string' && val.match(/[A-Za-z]/)) {
-      const parts = val.trim().split(/\s+/);
-      if (parts.length === 2 && parts[1].length === 4) return parts[0] + "'" + parts[1].slice(2);
-      return val;
-    }
-    // If serial number, convert
+    // If already a string like "Jun 2026", keep as-is
+    if (typeof val === 'string' && val.match(/[A-Za-z]/)) return val.trim();
+    // If serial number, convert to "Jun 2026" format
     if (!isNaN(Number(val)) && Number(val) > 30000) {
       const d = fromSerial(Number(val));
-      return d.toLocaleDateString('en-GB', {month:'short'}) + "'" + String(d.getFullYear()).slice(2);
+      return d.toLocaleString('default', {month:'short', year:'numeric'});
     }
     return String(val);
   }
@@ -1448,8 +1444,14 @@ function getMonthlyAverages(teamFilter) {
       total: avg('total'),
       days: entries.length
     };
-  }).sort((a,b) => new Date('01 '+a.month) - new Date('01 '+b.month));
+  }).sort((a,b) => {
+    const toDate = m => { const [mon,yr] = m.split("'"); return new Date('01 ' + mon + ' 20' + yr); };
+    try { return toDate(a.month) - toDate(b.month); } catch(e) { return 0; }
+  });
 }
+
+// Shorten "Jun 2026" → "Jun'26" for display
+function shortMonth(m) { const p = String(m).replace(' ●','').trim().split(/\s+/); return p.length===2 && p[1].length===4 ? p[0]+"'"+p[1].slice(2) : m; }
 
 function renderInsights() {
   const teamFilter = document.getElementById('miTeamSelect').value;
@@ -1471,7 +1473,7 @@ function renderInsights() {
   document.querySelector('.mi-trend-title').textContent = `Backlog trend by age band — ${teamFilter}`;
 
   // Trend chart
-  const labels = monthly.map(m => m.isLive ? m.month + ' ●' : m.month);
+  const labels = monthly.map(m => { const s = shortMonth(m.month); return m.isLive ? s + ' ●' : s; });
   mkChart('trendChart', {
     type: 'line',
     data: {
@@ -1586,7 +1588,7 @@ function renderTeamPerf(monthly, teamFilter) {
   document.getElementById('teamPerfWrap').innerHTML = `
     <p style="font-size:11px;color:var(--teal);margin-bottom:10px;font-weight:600;">Viewing: ${teamFilter || 'All Cases'}</p>
     <table class="team-perf-table">
-      <thead><tr><th>Band</th><th>${prev.month}</th><th>${cur.month}</th><th>Change</th></tr></thead>
+      <thead><tr><th>Band</th><th>${shortMonth(prev.month)}</th><th>${shortMonth(cur.month)}</th><th>Change</th></tr></thead>
       <tbody>${rows.map(r => {
         const diff = r.cur - r.prev;
         const arrow = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
