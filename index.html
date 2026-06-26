@@ -1312,8 +1312,9 @@ function seedTodaySnapshot() {
   const d = appData.all;
   const age = d.by_age || {};
   const now = new Date();
-  const monthKey = now.toLocaleString('default',{month:'short',year:'numeric'});
-  const today = now.toISOString().slice(0,10);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const monthKey = months[now.getMonth()] + "'" + String(now.getFullYear()).slice(2);
+  const today = now.toLocaleDateString('en-GB', {day:'2-digit',month:'2-digit',year:'numeric'});
 
   // If script outputs snapshot_teams, seed each team row
   if (appData.snapshot_teams && appData.snapshot_teams.length > 0) {
