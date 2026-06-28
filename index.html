@@ -126,6 +126,14 @@
   .dm-btn:hover { background: rgba(24,95,165,0.15); color: var(--text); border-color: rgba(24,95,165,0.5); }
   .dm-btn.active { background: #185FA5; border-color: #185FA5; color: #fff; font-weight: 700; }
 
+  /* DI SUB-TEAM FILTER */
+  .di-sub-bar { display: flex; align-items: center; gap: 6px; margin-bottom: 20px; flex-wrap: wrap; transition: opacity 0.2s; }
+  .di-sub-bar.hidden { display: none; }
+  .di-label { font-size: 10px; font-weight: 700; color: #7c6af5; text-transform: uppercase; letter-spacing: 0.07em; margin-right: 2px; white-space: nowrap; }
+  .di-btn { padding: 4px 12px; font-size: 11px; font-weight: 500; border-radius: var(--radius-sm); border: 1px solid rgba(124,106,245,0.3); background: rgba(124,106,245,0.06); color: var(--text-muted); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .di-btn:hover { background: rgba(124,106,245,0.15); color: var(--text); border-color: rgba(124,106,245,0.5); }
+  .di-btn.active { background: #7c6af5; border-color: #7c6af5; color: #fff; font-weight: 700; }
+
   /* CROSS-FILTER */
   .chart-card.cf-active { border-color: var(--teal) !important; box-shadow: 0 0 0 2px rgba(0,212,170,0.2); }
   .cf-clear-btn { font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 10px; border: 1px solid rgba(0,212,170,0.5); background: rgba(0,212,170,0.1); color: var(--teal); cursor: pointer; display: none; }
@@ -457,6 +465,15 @@
     <button class="dm-btn" id="dm-insights"          onclick="setDmSub('dm-insights',this)">Insights</button>
   </div>
 
+  <!-- DI Sub-team filter — only visible when Data Insights is selected -->
+  <div class="di-sub-bar hidden" id="diSubBar">
+    <span class="di-label">↳ DI team</span>
+    <button class="di-btn active" id="di-all"         onclick="setDiSub('all',this)">All DI</button>
+    <button class="di-btn" id="di-analytics"          onclick="setDiSub('di-analytics',this)">Analytics Support</button>
+    <button class="di-btn" id="di-cashcalc"           onclick="setDiSub('di-cashcalc',this)">Cashcalc Support</button>
+    <button class="di-btn" id="di-commanddeck"        onclick="setDiSub('di-commanddeck',this)">Command Deck Support</button>
+  </div>
+
   <div class="metrics" id="metricsRow"></div>
 
   <div class="target-panel">
@@ -574,6 +591,9 @@
       <option value="Insights" style="background:#0d1b2a;">↳ Insights</option>
       <option value="Data Exchange" style="background:#0d1b2a;">Data Exchange</option>
       <option value="Data Insights" style="background:#0d1b2a;">Data Insights</option>
+      <option value="Analytics Support" style="background:#0d1b2a;">↳ Analytics Support</option>
+      <option value="Cashcalc Support" style="background:#0d1b2a;">↳ Cashcalc Support</option>
+      <option value="Command Deck Support" style="background:#0d1b2a;">↳ Command Deck Support</option>
       <option value="Other Functions" style="background:#0d1b2a;">Other Functions</option>
     </select>
   </div>
@@ -669,6 +689,7 @@ let charts = {}, monthlySnapshots = [], closureData = [], insightsLoaded = false
 let recordTypes = []; // dynamically built from data
 let currentTeamFilter = 'all'; // 'all' | 'dms' | 'dist' | 'adv'
 let currentDmSub = 'all'; // 'all' | 'dm-fundipedia' | 'dm-publifund' | 'dm-fundinfo' | 'dm-regfiling' | 'dm-insights' | 'dm-others'
+let currentDiSub = 'all'; // 'all' | 'di-analytics' | 'di-cashcalc' | 'di-commanddeck'
 let crossFilter = { product: null, cat: null, team: null, rec: null };
 let selectedAccounts = new Set(); // account name multi-select
 
@@ -724,6 +745,17 @@ const PRODUCT_DM_SUB = {
   'Finscape':                       'dm-insights',
   'FundConnect - Web Solutions':    'dm-insights',
   // Everything else in DMS → dm-others
+};
+
+// Product → DI Sub-team mapping
+const PRODUCT_DI_SUB = {
+  'Analytics':    'di-analytics',
+  'FinXL':        'di-analytics',
+  'FE Trustnet':  'di-analytics',
+  'AdviserAsset': 'di-analytics',
+  'MPS':          'di-analytics',
+  'CashCalc':     'di-cashcalc',
+  'Command Deck': 'di-commanddeck',
 };
 
 // ── Page navigation ──────────────────────────────────────
@@ -896,11 +928,15 @@ function setView(v, btn) {
   // Always reset team filter to All Teams when switching record type tab
   currentTeamFilter = 'all';
   currentDmSub = 'all';
+  currentDiSub = 'all';
   document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tf-all').classList.add('active');
   document.getElementById('dmSubBar').classList.add('hidden');
   document.querySelectorAll('.dm-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('dm-all').classList.add('active');
+  document.getElementById('diSubBar').classList.add('hidden');
+  document.querySelectorAll('.di-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('di-all').classList.add('active');
 
   // Team filter only applies to Client Support record type
   const rtFilter = currentRecordTypeFilter();
@@ -919,18 +955,28 @@ function setView(v, btn) {
 function setTeamFilter(team, btn) {
   currentTeamFilter = team;
   currentDmSub = 'all';
+  currentDiSub = 'all';
   document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
 
   // Show/hide DM sub-team bar
-  const subBar = document.getElementById('dmSubBar');
+  const dmBar = document.getElementById('dmSubBar');
   if (team === 'dms') {
-    subBar.classList.remove('hidden');
-    // Reset sub-team buttons
+    dmBar.classList.remove('hidden');
     document.querySelectorAll('.dm-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('dm-all').classList.add('active');
   } else {
-    subBar.classList.add('hidden');
+    dmBar.classList.add('hidden');
+  }
+
+  // Show/hide DI sub-team bar
+  const diBar = document.getElementById('diSubBar');
+  if (team === 'adv') {
+    diBar.classList.remove('hidden');
+    document.querySelectorAll('.di-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('di-all').classList.add('active');
+  } else {
+    diBar.classList.add('hidden');
   }
 
   crossFilter = { product: null, cat: null, team: null, rec: null };
@@ -941,12 +987,23 @@ function setTeamFilter(team, btn) {
 
 function setDmSub(sub, btn) {
   currentDmSub = sub;
-  // Ensure Data Management is active on row 2
   currentTeamFilter = 'dms';
   document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tf-dms').classList.add('active');
-  // Update sub-bar active state
   document.querySelectorAll('.dm-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  crossFilter = { product: null, cat: null, team: null, rec: null };
+  updateCrossFilterUI();
+  closeDrilldown();
+  render();
+}
+
+function setDiSub(sub, btn) {
+  currentDiSub = sub;
+  currentTeamFilter = 'adv';
+  document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tf-adv').classList.add('active');
+  document.querySelectorAll('.di-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   crossFilter = { product: null, cat: null, team: null, rec: null };
   updateCrossFilterUI();
@@ -959,7 +1016,7 @@ function getFilteredData() {
   const sortObj = (obj, n=10) => Object.fromEntries(Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,n));
   const hasAcctFilter = selectedAccounts.size > 0;
 
-  const noFilter = !rtFilter && currentTeamFilter === 'all' && currentDmSub === 'all' && !Object.values(crossFilter).some(Boolean) && !hasAcctFilter;
+  const noFilter = !rtFilter && currentTeamFilter === 'all' && currentDmSub === 'all' && currentDiSub === 'all' && !Object.values(crossFilter).some(Boolean) && !hasAcctFilter;
   if (noFilter) {
     return {
       total:      appData.all.total,
@@ -986,6 +1043,13 @@ function getFilteredData() {
     filtered = filtered.filter(c => {
       const sub = PRODUCT_DM_SUB[c['Product Name']] || 'dm-others';
       return sub === currentDmSub;
+    });
+  }
+  // DI sub-team filter
+  if (currentTeamFilter === 'adv' && currentDiSub !== 'all') {
+    filtered = filtered.filter(c => {
+      const sub = PRODUCT_DI_SUB[c['Product Name']] || 'di-other';
+      return sub === currentDiSub;
     });
   }
   if (crossFilter.product) filtered = filtered.filter(c => c['Product Name'] === crossFilter.product);
@@ -1058,7 +1122,7 @@ function renderMetrics(d) {
   const target = filteredCases.filter(c => c.target_reduction > 0).length;
   const plus5  = filteredCases.filter(c => c.age_bucket === '5plus').length;
 
-  const noFilter = currentView === 'all' && currentTeamFilter === 'all' && currentDmSub === 'all' && !Object.values(crossFilter).some(Boolean) && selectedAccounts.size === 0;
+  const noFilter = currentView === 'all' && currentTeamFilter === 'all' && currentDmSub === 'all' && currentDiSub === 'all' && !Object.values(crossFilter).some(Boolean) && selectedAccounts.size === 0;
   // d.total already equals appData.all.total when noFilter (via getFilteredData)
   const pct = appData.all.total ? Math.round(d.total / appData.all.total * 100) : 100;
 
@@ -1102,6 +1166,10 @@ function filteredCasesForBuckets(buckets) {
     if (currentTeamFilter === 'dms' && currentDmSub !== 'all') {
       const sub = PRODUCT_DM_SUB[c['Product Name']] || 'dm-others';
       if (sub !== currentDmSub) return false;
+    }
+    if (currentTeamFilter === 'adv' && currentDiSub !== 'all') {
+      const sub = PRODUCT_DI_SUB[c['Product Name']] || 'di-other';
+      if (sub !== currentDiSub) return false;
     }
     if (crossFilter.product && c['Product Name'] !== crossFilter.product) return false;
     if (crossFilter.cat     && c['Case Category'] !== crossFilter.cat) return false;
