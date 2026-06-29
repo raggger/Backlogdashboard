@@ -1279,7 +1279,7 @@ function renderDrillTable() {
       <td>${c['Case Owner Team']}</td>
       <td><span class="rec-badge ${isCS?'rec-cs':'rec-other'}">${c['Case Record Type']}</span></td>
       <td>${c['Date Opened']}</td>
-      <td><span style="background:${tag.bg};color:${tag.color};font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;">${tag.label}</span></td>
+      <td><span style="background:${tag.bg};color:${tag.color};font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;white-space:nowrap;">${tag.label}</span></td>
       <td>${c['Case ID'] ? `<a href="https://fefi.lightning.force.com/lightning/r/Case/${c['Case ID']}/view" target="_blank" style="color:var(--teal);font-size:13px;text-decoration:none;" title="Open in Fusion">↗</a>` : '—'}</td>
     </tr>`;
   }).join('');
