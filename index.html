@@ -500,7 +500,7 @@
     <div id="ddTeamBreakdown" style="padding:10px 18px 4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;border-bottom:1px solid rgba(255,255,255,0.07);"></div>
     <div class="dd-table-wrap">
       <table class="dd-table">
-        <thead><tr><th>Case #</th><th>Product</th><th>Case Category</th><th>Case Owner Team</th><th>Record Type</th><th>Date Opened</th><th>Target</th></tr></thead>
+        <thead><tr><th>Case #</th><th>Product</th><th>Case Category</th><th>Case Owner Team</th><th>Record Type</th><th>Date Opened</th><th>Target</th><th>Fusion</th></tr></thead>
         <tbody id="ddTbody"></tbody>
       </table>
     </div>
@@ -1280,6 +1280,7 @@ function renderDrillTable() {
       <td><span class="rec-badge ${isCS?'rec-cs':'rec-other'}">${c['Case Record Type']}</span></td>
       <td>${c['Date Opened']}</td>
       <td><span style="background:${tag.bg};color:${tag.color};font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;">${tag.label}</span></td>
+      <td>${c['Case ID'] ? `<a href="https://fefi.lightning.force.com/lightning/r/Case/${c['Case ID']}/view" target="_blank" style="color:var(--teal);font-size:13px;text-decoration:none;" title="Open in Fusion">↗</a>` : '—'}</td>
     </tr>`;
   }).join('');
   // store for export
@@ -1290,10 +1291,11 @@ function exportDrillXLS() {
   const cases = window._currentDrillCases || [];
   if (!cases.length) return;
   const title = document.getElementById('ddTitle').textContent;
-  const rows = [['Case Number','Product Name','Case Category','Case Owner Team','Record Type','Date Opened','Target']];
+  const rows = [['Case Number','Product Name','Case Category','Case Owner Team','Record Type','Date Opened','Target','Fusion Link']];
   cases.forEach(c => {
     const tgt = c.target_reduction === 100 ? '100% close' : c.target_reduction === 50 ? '50% reduce' : c.target_reduction === 40 ? '40% reduce' : 'On track';
-    rows.push([c['Case Number'],c['Product Name'],c['Case Category']||'',c['Case Owner Team'],c['Case Record Type'],c['Date Opened'],tgt]);
+    const link = c['Case ID'] ? 'https://fefi.lightning.force.com/lightning/r/Case/' + c['Case ID'] + '/view' : '';
+    rows.push([c['Case Number'],c['Product Name'],c['Case Category']||'',c['Case Owner Team'],c['Case Record Type'],c['Date Opened'],tgt,link]);
   });
   let csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
